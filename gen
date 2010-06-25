@@ -1,0 +1,27 @@
+#!/bin/bash
+# compile the pyjamas AUR app into deployable JS
+
+orig_pwd="$(pwd)" && cd "$(dirname ${0})" && base="$(pwd)" || { echo 'problems...'; exit 1; }
+
+# workaround for public folder issue in pyjs
+if [ ! -L ${base}/pub/_pyjs.js -a ! -e ${base}/pub/_pyjs.js ]; then
+    ln -s ../.pyjs/pyjs/src/pyjs/builtin/public/_pyjs.js ${base}/pub
+fi
+
+# don't remove the folder; messes up SimpleHTTPServer (it's it the folder)
+rm -rf ${base}/out/*
+cd ${base}/src
+
+if ! [ -e ${base}/.pyjs/bin/pyjsbuild ]; then
+    ${base}/init || { echo 'problem building'; exit 1; }
+fi
+
+${base}/.pyjs/bin/pyjsbuild \
+    -mcO \
+    --bootstrap-file="Aur.js" \
+    --public-folder="${base}/pub" \
+    --output="${base}/out" \
+    Aur.py
+
+cd ${orig_pwd}
+exit 0

@@ -1,0 +1,18 @@
+#!/bin/bash
+# bootstrap the pyjamas AUR setup for development
+
+orig_pwd="$(pwd)" && cd "$(dirname ${0})" && base="$(pwd)" || { echo 'problems...'; exit 1; }
+
+if [ -e ${base}/.pyjs/.git ]; then
+    git --git-dir=${base}/.pyjs/.git pull
+else
+    git clone git://pyjamas.git.sourceforge.net/gitroot/pyjamas/pyjamas ${base}/.pyjs
+fi
+
+if ! [ -d ${base}/.pyjs/bin ]; then
+    cd ${base}/.pyjs
+    make local-build || { echo 'problem bootstrapping pyjs sandbox'; exit 1; }
+    cd ${base}
+fi
+
+exit 0

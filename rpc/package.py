@@ -1,0 +1,3 @@
+# -*- coding: utf-8 -*-
+# this file needs to implement a JSON-RPC service providing the methods:
+# ...
