@@ -1,11 +1,13 @@
 #!/bin/bash
 # serve a static pyjamas AUR (no RPC)
 
-orig_pwd="$(pwd)" && cd "$(dirname ${0})" && base="$(pwd)" || { echo 'problems...'; exit 1; }
+exec 3> /dev/null
 
-cd ${base}/out
+spushd () { pushd ${1} >&3; }
+spopd () { popd >&3; }
 
+spushd $(dirname ${0})/out
 python -m SimpleHTTPServer
 
-cd ${orig_pwd}
+spopd
 exit 0

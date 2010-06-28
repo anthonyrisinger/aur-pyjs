@@ -1,18 +1,34 @@
 #!/bin/bash
-# bootstrap the pyjamas AUR setup for development
+# bootstrap pyjamas AUR
 
-orig_pwd="$(pwd)" && cd "$(dirname ${0})" && base="$(pwd)" || { echo 'problems...'; exit 1; }
+exec 3> /dev/null
 
-if [ -e ${base}/.pyjs/.git ]; then
-    git --git-dir=${base}/.pyjs/.git pull
-else
-    git clone git://pyjamas.git.sourceforge.net/gitroot/pyjamas/pyjamas ${base}/.pyjs
-fi
+spushd () { pushd ${1} >&3; }
+spopd () { popd >&3; }
 
-if ! [ -d ${base}/.pyjs/bin ]; then
-    cd ${base}/.pyjs
-    make local-build || { echo 'problem bootstrapping pyjs sandbox'; exit 1; }
-    cd ${base}
-fi
+PYJS_SANDBOX=${1:-false}
+E_CODE=0
 
-exit 0
+${PYJS_SANDBOX} && {
+
+    spushd "$(dirname ${0})"
+    
+    if [ -e .pyjs/.git ]; then
+        git --git-dir=.pyjs/.git pull
+    else
+        git clone git://pyjs.org/git/pyjamas.git .pyjs
+    fi
+
+    # run bootstrap everytime
+    if [ -d .pyjs ]; then
+        spushd .pyjs
+        make local-build ||
+            { echo 'problem bootstrapping pyjs sandbox'; E_CODE=1; }
+        spopd
+    fi
+
+    spopd
+
+}
+
+exit ${E_CODE}
