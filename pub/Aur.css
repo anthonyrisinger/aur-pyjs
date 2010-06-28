@@ -172,7 +172,7 @@ iframe { position: absolute; }
 .aur-search-advanced-group {
     background-color: #FFC;
     border: 1px solid #CCC;
-    padding: 0.65em;
+    padding: 0.325em;
 }
 
 .aur-search-advanced-group .gwt-Image { cursor: pointer; }
@@ -190,14 +190,14 @@ iframe { position: absolute; }
 .aur-search-advanced-group-op {
     cursor: pointer;
     font-weight: bold;
-    border-right: 1px solid #CCC;
+    border-right: 8px solid #CCC;
     padding-right: 0.325em;
 }
 
 .aur-search-advanced-param {
     background-color: white;
     border: 1px solid #888;
-    padding: 0.65em;
+    padding: 0.325em;
 }
 
 .aur-search-advanced-delete { margin-right: 0.65em; }
@@ -209,7 +209,7 @@ iframe { position: absolute; }
 .aur-search-advanced-param-op {
     cursor: pointer;
     font-weight: bold;
-    border-right: 1px solid #888;
+    border-right: 8px solid #888;
     padding-right: 0.325em;
 }
 
