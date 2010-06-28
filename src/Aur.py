@@ -6,7 +6,6 @@ from pyjamas.ui.HTML import HTML
 from pyjamas.ui.VerticalPanel import VerticalPanel
 from pyjamas.ui.HorizontalPanel import HorizontalPanel
 from pyjamas.ui.SimplePanel import SimplePanel
-from pyjamas.ui.FlowPanel import FlowPanel
 from pyjamas.ui.Image import Image
 from pyjamas.ui.Hyperlink import Hyperlink
 from pyjamas.ui.TextBox import TextBox
@@ -19,6 +18,15 @@ import Search
 
 # global handle for the Main instance
 APP = None
+
+#COPYRIGHT=[
+#    {'name':'Judd Vinet', 'link':'mailto:jvinet@zeroflux.org'},
+#    {'name':'Aaron Griffin', 'link':'mailto:aaron@archlinux.org'}
+#]
+COPYRIGHT=[
+    {'name':'XXXXXX', 'link':'#'},
+    {'name':'XXXXXX', 'link':'#'}
+]
 
 class Main:
 
@@ -126,7 +134,10 @@ class Main:
         container.add(Hyperlink(Text='Submit', TargetHistoryToken='/submit', StyleName='aur-link-stateless', Title='Submit/Update package to AUR', Visible=False))
 
     def drawFooter(self, container):
-        container.add(HTML('Copyright &copy; 2002-2010 <a href="mailto:jvinet@zeroflux.org" title="Contact Judd Vinet">Judd Vinet</a> and <a href="mailto:aaron@archlinux.org" title="Contact Aaron Griffin">Aaron Griffin</a>.'))
+        # dictionary coercion not supported
+        tpl = '<a href="%s" title="Contact %s">%s</a>'
+        copyright = ' and '.join([tpl % (holder['link'], holder['name'], holder['name']) for holder in COPYRIGHT])
+        container.add(HTML('Copyright &copy; 2002-2010 ' + copyright + '.'))
         container.add(HTML('The Arch Linux name and logo are recognized <a href="http://wiki.archlinux.org/index.php/DeveloperWiki:TrademarkPolicy" title="Arch Linux Trademark Policy">trademarks</a>. Some rights reserved.'))
         container.add(HTML('The registered trademark Linux® is used pursuant to a sublicense from LMI, the exclusive licensee of Linus Torvalds, owner of the mark on a world-wide basis.'))
 
