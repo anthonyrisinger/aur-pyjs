@@ -5,19 +5,32 @@ exec 3> /dev/null
 
 spushd () { pushd ${1} >&3; }
 spopd () { popd >&3; }
+fatal () { echo "${1}"; exit 1; }
 
-spushd $(dirname ${0})
+BASE=$(dirname ${0})
+spushd ${BASE}
 
-PYJS_BOX_EXEC=$(pwd)/.pyjs/bin/pyjsbuild
-PYJS_SYS_EXEC=$(which pyjsbuild 2>&-)
+: ${PYJS_EXEC:=}
+PYJS_EXEC_POSSIBLE=(
+    "${PYJS_EXEC}"
+    "${BASE}/.pyjs/bin/pyjsbuild"
+    "${BASE}/../.pyjs/bin/pyjsbuild"
+    "$(which pyjsbuild 2>&-)"
+)
 
-if [ ! -e "${PYJS_BOX_EXEC}" -a ! -e "${PYJS_SYS_EXEC}" ]; then
-    ./init 'true' || { echo 'could not find PYJS_EXEC (pyjsbuild)'; exit 1; }
-    PYJS_EXEC=${PYJS_BOX_EXEC}
-elif [ -e "${PYJS_BOX_EXEC}" ]; then
-    PYJS_EXEC=${PYJS_BOX_EXEC}
-else
-    PYJS_EXEC=${PYJS_SYS_EXEC}
+! [ -e "${PYJS_EXEC}" ] && {
+    for x in ${PYJS_EXEC_POSSIBLE[@]}; do
+        if [ -e "${x}" ]; then
+            PYJS_EXEC=${x}
+            break
+        fi
+    done
+}
+
+# last try
+if ! [ -e "${PYJS_EXEC}" ]; then
+    ./init 'true' || fatal 'could not find PYJS_EXEC (pyjsbuild)'
+    PYJS_EXEC="${BASE}/.pyjs/bin/pyjsbuild"
 fi
 
 # don't remove the folder; SimpleHTTPServer could be running
@@ -25,7 +38,7 @@ rm -rf out/*
 
 # build AUR
 spushd src
-${PYJS_EXEC} -mcO --bootstrap-file="Aur.js" --output="../out" Aur.py
+${PYJS_EXEC} -mcO --bootstrap-file='Aur.js' --output='../out' Aur.py
 spopd
 
 # copy pub folder to out
