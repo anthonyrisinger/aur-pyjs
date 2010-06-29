@@ -1,0 +1,37 @@
+# Contributor: C Anthony Risinger
+pkgname=aur-pyjs-git
+pkgver=20100629
+pkgrel=1
+pkgdesc="Implementation of the AUR in python (pyjs)"
+url=http://devel.extof.me/aur-pyjs
+arch=(any)
+license=(BSD)
+depends=(python pyjamas)
+makedepends=(git)
+source=()
+
+_gitroot="git://github.com/extofme/aur-pyjs.git"
+_gitname="master"
+
+build() {
+
+    deploy=/usr/lib/${pkgname}
+
+    msg2 "Syncing with ${_gitroot}..."
+    g=${startdir}/${pkgname}.git; w=${pkgdir}${deploy}
+    if [ -d "${g}" ]; then
+        mkdir -p ${w}
+        git --git-dir=${g} fetch --all -n -u || return 1
+        git --git-dir=${g} update-ref HEAD origin/${_gitname}
+        git --git-dir=${g} read-tree --reset -u HEAD || return 1
+    else
+        git --work-tree=${w} clone ${_gitroot} ${g} || return 1
+    fi
+
+    msg2 "Building the AUR..."
+    ${w}/gen || return 1
+
+    # gen automatically syncs pyjamas if missing; remove if exists
+    rm -rf ${w}/.pyjs
+
+}
