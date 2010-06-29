@@ -1,34 +1,49 @@
 #!/bin/bash
-# bootstrap pyjamas AUR
+# bootstrap pyjamas AUR + optionally create devel environment in $HOME
 
 exec 3> /dev/null
 
 spushd () { pushd ${1} >&3; }
 spopd () { popd >&3; }
+fatal () { echo ${1}; exit 1; }
 
-PYJS_SANDBOX=${1:-false}
-E_CODE=0
+BASE=$(dirname $(readlink -f ${0}))
+LOCAL=aur-pyjs
+SANDBOX_ONLY=${1:-false}
 
-${PYJS_SANDBOX} && {
+create_or_update_sandbox () {
 
-    spushd "$(dirname ${0})"
-    
+    spushd ${BASE}
+
     if [ -e .pyjs/.git ]; then
         git --git-dir=.pyjs/.git pull
     else
         git clone git://pyjs.org/git/pyjamas.git .pyjs
-    fi
+    fi  
 
     # run bootstrap everytime
     if [ -d .pyjs ]; then
         spushd .pyjs
-        make local-build ||
-            { echo 'problem bootstrapping pyjs sandbox'; E_CODE=1; }
+        make local-build || fatal 'problem bootstrapping pyjs sandbox'
         spopd
-    fi
+    fi  
 
     spopd
 
 }
 
-exit ${E_CODE}
+if ! ${SANDBOX_ONLY}; then
+    [ -n "${HOME}" ] || fatal '$HOME is not set'
+    if ! [ -e "${HOME}/${LOCAL}" ]; then
+        cp -R ${BASE} ${HOME}/${LOCAL}
+        BASE=${HOME}/${LOCAL}
+    elif [ -x "${HOME}/${LOCAL}/init" ]; then
+        exec ${HOME}/${LOCAL}/init 'true'
+    else
+        fatal "${HOME}/${LOCAL} exists, but appears foreign"
+    fi
+fi
+
+create_or_update_sandbox
+
+exit 0

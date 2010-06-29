@@ -9,25 +9,24 @@
 LOCAL_IS_MAINTAINER=false
 
 MAINTAINER=extofme
-CATEGORY_ID=16
+CATEGORY_ID=3
 CATEGORY_NAME=devel
 
 exec 3> /dev/null
 
-BASE=$(dirname ${0})
+BASE=$(dirname $(readlink -f ${0}))
 LOCAL_INSTALL=${1:-false}
 AUR_UPLOAD=${2:-false}
-: ${AUR_UPLOAD_EXEC:=''}
+: ${AUR_UPLOAD_EXEC:='aurploader'}
 
 ${LOCAL_INSTALL} && makepkg_opts='-i'
 ${AUR_UPLOAD} && {
     do_aur () {
-        echo ${AUR_UPLOAD_EXEC}
+        PKGDEST="${BASE}/pkg" makepkg --source
+        ${AUR_UPLOAD_EXEC} ${1}
     }
 } || {
-    do_aur () {
-        true
-    }
+    do_aur () { :; }
 }
 
 spushd () { pushd ${1} >&3; }
@@ -35,9 +34,13 @@ spopd () { popd >&3; }
 error() { echo "${1}"; }
 fatal () { echo "${1}"; exit 1; }
 
+TARGET_SRC='aur-pyjs-git-*.src.tar.*'
+TARGET_PKG='aur-pyjs-git-*.pkg.tar.*'
+
 spushd ${BASE}/pkg
-makepkg -f ${makepkg_opts} || fatal 'Build failed'
-do_aur || error 'AUR [legacy] sync failed'
+rm -f ${TARGET_SRC} ${TARGET_PKG}
+PKGDEST="${BASE}/pkg" makepkg ${makepkg_opts} || fatal 'Build failed'
+do_aur ${TARGET_SRC} || error 'AUR [legacy] sync failed'
 
 spopd
 exit 0

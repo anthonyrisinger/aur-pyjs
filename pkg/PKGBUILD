@@ -6,7 +6,7 @@ pkgdesc="Implementation of the AUR in python (pyjs)"
 url=http://devel.extof.me/aur-pyjs
 arch=(any)
 license=(BSD)
-depends=(python pyjamas)
+depends=(python)
 makedepends=(git)
 source=()
 
@@ -29,7 +29,7 @@ build() {
     fi
 
     msg2 "Building the AUR..."
-    ${w}/gen || return 1
+    BASE_ALT=${startdir}/.. ${w}/gen || return 1
 
     # gen automatically syncs pyjamas if missing; remove if exists
     rm -rf ${w}/.pyjs
