@@ -39,6 +39,7 @@ TARGET_PKG='aur-pyjs-git-*.pkg.tar.*'
 
 spushd ${BASE}/pkg
 rm -f ${TARGET_SRC} ${TARGET_PKG}
+[ -e "${BASE}/.git" ] && export _gitroot="${BASE}/.git"
 PKGDEST="${BASE}/pkg" makepkg -d ${makepkg_opts} || fatal 'Build failed'
 do_aur ${TARGET_SRC} || error 'AUR [legacy] sync failed'
 

@@ -10,8 +10,9 @@ depends=(python pyjamas)
 makedepends=(git)
 source=()
 
-_gitroot="git://github.com/extofme/aur-pyjs.git"
-_gitname="master"
+# allow in ENV
+: ${_gitroot:="git://github.com/extofme/aur-pyjs.git"}
+: ${_gitname:="master"}
 
 build() {
 
@@ -21,6 +22,8 @@ build() {
     g=${startdir}/${pkgname}.git; w=${pkgdir}${deploy}
     if [ -d "${g}" ]; then
         mkdir -p ${w}
+        # this allows _gitroot to be set in ENV
+        git --git-dir=${g} remote set-url origin ${_gitroot} || return 1
         git --git-dir=${g} fetch --all -n -u || return 1
         git --git-dir=${g} update-ref HEAD origin/${_gitname}
         git --git-dir=${g} read-tree --reset -u HEAD || return 1
