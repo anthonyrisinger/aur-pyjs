@@ -19,6 +19,8 @@ LOCAL_INSTALL=${1:-false}
 AUR_UPLOAD=${2:-false}
 : ${AUR_UPLOAD_EXEC:='aurploader'}
 
+${LOCAL_INSTALL} && makepkg_opts='-i'
+
 do_aur () {
     ${AUR_UPLOAD} || return 0
     PKGDEST="${BASE}/pkg" makepkg --source
@@ -34,6 +36,9 @@ TARGET_SRC='aur-pyjs-git-*.src.tar.*'
 TARGET_PKG='aur-pyjs-git-*.pkg.tar.*'
 
 spushd ${BASE}/pkg
+
+# make sure pyjs is ready
+../init true
 rm -f ${TARGET_SRC} ${TARGET_PKG}
 [ -e "${BASE}/.git" ] && export _gitroot="${BASE}/.git"
 PKGDEST="${BASE}/pkg" makepkg -d ${makepkg_opts} || fatal 'Build failed'

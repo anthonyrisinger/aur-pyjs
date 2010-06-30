@@ -8,8 +8,11 @@ spopd () { popd >&3; }
 fatal () { echo ${1}; exit 1; }
 
 BASE=$(dirname $(readlink -f ${0}))
-LOCAL=aur-pyjs
+LOCAL=${HOME}/aur-pyjs
+REMOTE=git://github.com/extofme/aur-pyjs.git
 SANDBOX_ONLY=${1:-false}
+
+! ${SANDBOX_ONLY} && [ -z "${HOME}" ] && fatal '$HOME is not set'
 
 create_or_update_sandbox () {
 
@@ -33,14 +36,13 @@ create_or_update_sandbox () {
 }
 
 if ! ${SANDBOX_ONLY}; then
-    [ -n "${HOME}" ] || fatal '$HOME is not set'
-    if ! [ -e "${HOME}/${LOCAL}" ]; then
-        cp -R ${BASE} ${HOME}/${LOCAL}
-        BASE=${HOME}/${LOCAL}
-    elif [ -x "${HOME}/${LOCAL}/init" ]; then
-        exec ${HOME}/${LOCAL}/init 'true'
+    if ! [ -e "${LOCAL}" ]; then
+        git clone ${REMOTE} ${LOCAL}
+        BASE=${LOCAL}
+    elif [ -x "${LOCAL}/init" ]; then
+        exec ${LOCAL}/init 'true'
     else
-        fatal "${HOME}/${LOCAL} exists, but appears foreign"
+        fatal "${LOCAL} exists, but appears foreign"
     fi
 fi
 
