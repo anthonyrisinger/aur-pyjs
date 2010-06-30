@@ -1,0 +1,124 @@
+Welcome to AUR3.  Python style.
+
+available (pre-alpha)...
+http://aur.archlinux.org/packages.php?ID=38359
+
+QUICKSTART
+
+1) install
+     # http://aur.archlinux.org/packages.php?ID=38359
+2) run
+     # /usr/lib/aur-pyjs-git/dev
+3) view
+     # http://127.0.0.1:8000/Aur.html
+
+INTRODUCTION
+
+This is a reimplementation of the AUR using a widget toolkit known as Pyjamas (http://pyjs.org).  Client-side code (to run in web 
+browsers) is written and maintained in python; when deploying to production, the python sources are compiled/translated to 100% 
+pure javascript.  The resulting javascript code can be ran on any major browser.  When deployed, this is a 100% pure javascript 
+application... thus, javascript is required, else you will see only a blank page.
+
+WHY PYJS?
+
+1) anyone that knows python can write clean, maintainable client-side code
+2) eliminates the need to know the umpteen inconsistencies amongst browsers
+3) via pyjamas-desktop, the app runs as 100% pure python, as a true desktop app, with no modifications
+4) back-ends are JSON-RPC; allows back-ends to be written in any language, and enforces a clean separation
+
+PROJECT STATUS
+
+1) FRAMEWORK
+     [complete] basic URL dispatcher
+     [complete] load new content pages with cache support
+     [new] create generic URL-to-module dispatcher (like cherrypy/etc.)
+2) SHELL
+     [complete] pixel perfect to other sections of the site
+     [complete] links/titles/copyright in place
+3) BASIC SEARCH
+     [complete] search front-end
+     [incomplete] perform search front-end
+     [incomplete] perform search back-end
+4) ADVANCED SEARCH
+     [complete] define toggles
+     [incomplete] define filters
+     [incomplete] define sorts
+     [incomplete] enable/enforce limits
+     [complete] search front-end
+     [incomplete] perform search front-end
+     [incomplete] perform search back-end
+5) LANGUAGES
+     [incomplete] Language.py module methods
+     [incomplete] language JSON-RPC backend (preferred), or hardcode in Language.py
+     [incomplete] replace hardcoded text with calls to Language module
+6) HOME
+     [complete] create page
+     [incomplete] introduction/disclaimer
+     [incomplete] recent updates front-end
+     [incomplete] recent updates back-end
+     [incomplete] statistics front-end
+     [incomplete] statistics back-end
+7) BROWSE/SEARCH/MY PACKAGES
+     [complete] create page
+     [incomplete] paginating results front-end
+     [incomplete] paginating results back-end
+8) VIEW PACKAGE
+     [incomplete] create page
+     [incomplete] package details front-end (name/link/desc/deps/files/etc.)
+     [incomplete] package details back-end
+     [incomplete] list comments front-end
+     [incomplete] list comments back-end
+     [incomplete] add comment front-end
+     [incomplete] add comment back-end
+9) ACCOUNTS
+     [incomplete] create page
+     [incomplete] create/edit account front-end
+     [incomplete] create/edit account back-end
+10) SUBMIT
+     [incomplete] create page
+     [incomplete] submit package front-end
+     [incomplete] submit package back-end
+
+PYJAMAS-DESKTOP ONLY (as python)
+
+1) INSTALL
+     [incomplete] add 'install' links (view/browse/search pages)
+     [incomplete] install status/details front-end (GUI)
+     [incomplete] python module "back-end" to download packages + dependencies and install
+
+GET INVOLVED
+
+1) set up a development environment + pyjs sandbox at ~/aur-pyjs...
+     # /usr/lib/aur-pyjs-git/init
+2) update pyjamas anytime by running...
+     # ~/aur-pyjs/init
+3) generate the AUR...
+     # ~/aur-pyjs/gen
+4) view the AUR...
+     # ~/aur-pyjs/dev
+     # http://127.0.0.1:8000/Aur.html
+5) create a package based off your local git master...
+     # ~/aur-pyjs/install
+6) create a package based off your local git master AND install it...
+     # ~/aur-pyjs/install true
+
+LAST WORDS
+
+yes.  I hope this to become the official AUR, and/or some other directions [1]
+yes.  running as a python desktop app, you will be able to install packages directly
+yes.  project is active; tentative completion date, september 1st
+possibly.  I'd like to make it capable of running independently, managing the local system
+no.  project is not a revived incarnation of other attempts
+
+) advanced search will be restricted
+) SOMEONE CAN START BUILDING JSON-RPC BACKENDS NOW
+) PHP and MySQL s_ck.   If I do it, the back-ends will be python ( + sqlite or couchdb)
+
+) feedback appreciated
+) to contribute, fork on github and send me a request.
+
+C Anthony
+
+[1] http://bbs.archlinux.org/viewtopic.php?id=90970
+
+licence [GPL2]
