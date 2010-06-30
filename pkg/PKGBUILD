@@ -1,6 +1,6 @@
 # Contributor: C Anthony Risinger
 pkgname=aur-pyjs-git
-pkgver=20100629
+pkgver=20100630
 pkgrel=1
 pkgdesc="Implementation of the AUR in python (pyjs)"
 url=http://devel.extof.me/aur-pyjs
@@ -19,7 +19,7 @@ build() {
     deploy=/usr/lib/${pkgname}
 
     msg2 "Syncing with ${_gitroot}..."
-    g=${startdir}/${pkgname}.git; w=${pkgdir}${deploy}
+    g=${startdir}/.${pkgname}.git; w=${pkgdir}${deploy}
     if [ -d "${g}" ]; then
         mkdir -p ${w}
         # this allows _gitroot to be set in ENV
