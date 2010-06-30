@@ -19,14 +19,10 @@ LOCAL_INSTALL=${1:-false}
 AUR_UPLOAD=${2:-false}
 : ${AUR_UPLOAD_EXEC:='aurploader'}
 
-${LOCAL_INSTALL} && makepkg_opts='-i'
-${AUR_UPLOAD} && {
-    do_aur () {
-        PKGDEST="${BASE}/pkg" makepkg --source
-        ${AUR_UPLOAD_EXEC} ${1}
-    }
-} || {
-    do_aur () { :; }
+do_aur () {
+    ${AUR_UPLOAD} || return 0
+    PKGDEST="${BASE}/pkg" makepkg --source
+    ${AUR_UPLOAD_EXEC} ${1}
 }
 
 spushd () { pushd ${1} >&3; }
