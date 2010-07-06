@@ -1,0 +1,149 @@
+#!/bin/bash
+#
+# COMMAND pkg
+
+# COMMAND init
+app_cmd_init () {
+
+    # includes
+    . ${APP_USR}/lib/${APP_NAME}/shared/dir_stack ||
+        app_exception ${LINENO} fatal "unable to source shared/dir_stack"
+
+    # required variables
+    APP_COMMAND_OPTSTR=":iu"
+
+    # COMMAND OPTSTRING/PARAM derived variables
+    : ${APP_PKG_INSTALL:=false}
+    : ${APP_PKG_UPLOAD:=false}
+
+    # internal variables
+    : ${APP_PKG_MAKEPKG_OPTS:=}
+    : ${APP_PKG_BASE:=${APP_BASE%/*}}
+    : ${APP_PKG_TARGET_SRC:='aur-pyjs*.src.tar.*'}
+    : ${APP_PKG_TARGET_PKG:='aur-pyjs*.pkg.tar.*'}
+    : ${APP_PKG_UPLOAD_EXEC:=aurploader}
+
+    return 0
+
+}
+
+# COMMAND usage
+app_cmd_usage () {
+
+    cat <<EOF
+Usage: ${APP_SELF} ${APP_COMMAND} [-i] [-u] 
+EOF
+
+    # show extended usage on help
+    [ "${1}" = "${APP_HELP}" ] || return 0
+
+    cat <<EOF
+Package local/remote build and optionally install and/or upload to AUR legacy
+
+Options:
+   -i   install package locally
+   -u   upload to AUR legacy after building
+EOF
+
+    return 0
+
+}
+
+# COMMAND opts processor
+app_cmd_opt () {
+
+    local opt="${1}" optind="${2}" optarg="${3}"
+    case "${opt}" in
+    i)
+        APP_PKG_INSTALL=true
+    ;;
+    u)
+        APP_PKG_UPLOAD=true
+    ;;
+    :)
+        app_exception ${LINENO} fatal "option -${optarg} requires an argument" ${FUNCNAME}
+    ;;
+    [?])
+        app_exception ${LINENO} fatal "option -${optarg} is not valid" ${FUNCNAME}
+    ;;
+    esac
+
+    return 0
+
+}
+
+app_cmd_param () {
+
+    # no params
+    app_exception ${LINENO} fatal "params not accepted" ${FUNCNAME}
+
+    return 0
+
+}
+
+# COMMAND's last chance to bail out before main
+app_cmd_pre_main () {
+
+    # verify all required variables and pre processing in this block
+    ${APP_PKG_INSTALL} &&
+        APP_PKG_MAKEPKG_OPTS=-i
+
+    [ -d ${APP_PKG_BASE} ] ||
+        app_exception ${LINENO} fatal "base directory (${APP_PKG_BASE}) does not exist"
+
+    # make sure pyjs is ready
+    if [ -d ${APP_PKG_BASE}/.pyjs ]; then
+        ${APP_REAL} sync -s aur ||
+            app_exception ${LINENO} fatal "unable to update/bootstrap pyjs"
+    fi
+
+    return 0
+
+}
+
+# COMMAND main
+app_cmd_main () {
+
+    # if we make it this far, assume everything is ready to rock
+    # register our handler
+    app_register_handle_fatal app_pkg_fatal
+
+    spushd ${APP_PKG_BASE}/pkg ||
+        app_exception ${LINENO} fatal "unable to switch to package dir (${APP_PKG_BASE}/pkg)"
+ 
+    rm -f ${APP_PKG_TARGET_SRC} ${APP_PKG_TARGET_PKG}
+    [ -e "${APP_PKG_BASE}/.git" ] && export _gitroot="${APP_PKG_BASE}"
+    PKGDEST="${APP_PKG_BASE}/pkg" makepkg -d ${APP_PKG_MAKEPKG_OPTS} ||
+        app_exception ${LINENO} fatal "package build failed"
+    if ${APP_PKG_UPLOAD}; then
+        app_pkg_aur_upload ${APP_PKG_TARGET_SRC} ||
+            app_exception ${LINENO} error "upload to AUR legacy failed"
+    fi
+
+    spopd
+
+    return 0
+
+}
+
+app_cmd_post_main () {
+
+    # everything completed successfully, unregister fatal handler
+    app_unregister_handle_fatal app_pkg_fatal
+
+    return 0
+
+}
+
+app_pkg_aur_upload () {
+
+    PKGDEST="${APP_PKG_BASE}/pkg" makepkg --source || return 1
+    ${APP_PKG_UPLOAD_EXEC} ${1} || return 1
+
+}
+
+app_pkg_fatal () {
+
+    return 0
+
+}

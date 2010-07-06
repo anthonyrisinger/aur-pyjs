@@ -1,0 +1,230 @@
+#!/bin/bash
+#
+# app main
+
+app_config () {
+
+    # source/find the configuration
+    if [ -z "${APP_CONF}" ]; then
+        local x l=aur-pyjs s=aur b=${APP_SELF}
+        # this will break immediately on the first/best hit
+        for x in {${1},/usr,/app,/usr/local,/opt,/opt/local}/etc/{${l}/${l},${s}/${s},${b}/${b}}.conf; do
+            [ -f "${x}" ] && APP_CONF=${x} && break
+        done
+        [ -z "${APP_CONF}" ] &&
+            app_exception ${LINENO} fatal "unable to find configuration" ${FUNCNAME}
+    fi
+    APP_BASE=${APP_CONF%/etc/*}
+    ! . ${APP_CONF} 2>&- &&
+        app_exception ${LINENO} fatal "unable to source ${APP_CONF}" ${FUNCNAME}
+
+}
+
+app_usage () {
+
+    cat <<EOF
+Usage: ${APP_SELF} COMMAND [help|OPTION]...
+Develop, translate, package, and serve AUR3
+EOF
+
+    # show extended usage on help
+    [ "${1}" = "${APP_HELP}" ] || return 0
+
+    cat <<EOF
+
+COMMANDs:
+   pkg     build package from local/remote master; opt. install; opt. upload
+   sync    bootstrap/update local/target devel environment
+   trans   translate python sources to javascript for deployment
+   serve   lastest local build at http://localhost:8000
+EOF
+
+}
+
+app_check_usage () {
+
+    local x cmd usage=false
+    cmd="${1#--}"; cmd="${cmd#-}";
+    [ "${APP_USAGE}" = "${cmd}" ] && usage=true
+    [ "${APP_HELP}" = "${cmd}" ] && usage=true
+    if ${usage}; then
+        app_cmd_usage "${cmd}" 2>&- || app_usage "$cmd" 2>&-
+        exit 0
+    fi
+
+}
+
+# prepend exception handler
+app_register_handle_fatal () {
+
+    APP_FATAL=("${1}" "${APP_FATAL[@]}")
+
+}
+
+# remove exception handler
+app_unregister_handle_fatal () {
+
+    # this trick will remove a handler from the stack
+    # we start from the back (%) as this will significantly
+    # reduce the possiblitly of a partial match. the array
+    # is then repacked (WITHOUT using quotes, else the missing
+    # item would be included in the pack)
+    APP_FATAL=(${APP_FATAL[@]%${1}})
+
+}
+
+# the default exception handler
+app_handle_fatal () {
+
+    # pretty pointless
+    return 1
+
+}
+
+# normal cleanup
+app_handle_exit () {
+
+    # just in case
+    [ "${APP_TMP}" =  "${APP_TMP#/tmp}" ] || rm -rf ${APP_TMP}
+
+}
+
+# add message to stack and/maybe trip error handlers
+app_exception () {
+
+    local self="${APP_COMMAND:-${APP_SELF}}" line="${1}" lvl="${2}" msg="${3}" func="${4:-main}"
+    local exception="${self}(${func}):${line} ${lvl}: ${msg}"
+    local exception_user="${lvl}: ${msg}"
+    case "${lvl}" in
+    info|warn)
+        APP_STACK=("${APP_STACK[@]}" "${exception}")
+        echo "${exception_user}"
+    ;;
+    debug)
+        ${APP_DEBUG:-false} &&
+            APP_STACK=("${APP_STACK[@]}" "${exception}") &&
+            echo "${exception_user}"
+    ;;
+    fatal)
+        # run handlers, drop stack, exit
+        local x
+        APP_STACK=("${APP_STACK[@]}" "${exception}")
+        # run the fatal exception handlers in order
+        for x in "${APP_FATAL[@]}"; do ${x}; done
+        # if debug drop variables
+        ${APP_DEBUG:-false} &&
+            echo "DEBUG enabled... variable list:" &&
+            { set | grep ^APP | sed -e "s/^/   /g"; }
+        # drop the stack
+        echo "FATAL exception encountered... stacktrace:"
+        for x in "${APP_STACK[@]}"; do echo "   ${x}"; done
+        # exit and trip the exit handler
+        exit 1
+    ;;
+    esac
+
+}
+
+# main
+app_main () {
+
+    # set up file handles
+    exec 3> /dev/null
+
+    # set up traps
+    trap 'app_exception ${LINENO} fatal "caught SIGTERM"' TERM
+    trap 'app_exception ${LINENO} fatal "caught SIGINT"' INT
+    trap app_handle_exit EXIT
+    
+    # self
+    APP_REAL="$(readlink -f ${BASH_SOURCE[0]})"
+    APP_BIN="$(dirname ${APP_REAL})"
+    APP_SELF="$(basename ${APP_REAL})"
+    
+    # simplest usage case
+    [ -z "${1}" ] && { app_usage; exit 0; }
+    
+    # source config
+    app_config ${APP_BIN%/usr/bin}
+    
+    # set up standard variables
+    APP_PWD="$(pwd)"
+    APP_FATAL=(app_handle_fatal)
+    APP_STACK=()
+
+    # possible usage strings
+    APP_USAGE="usage"
+    APP_HELP="help"
+    
+    # check for usage invocation
+    app_check_usage "${1}"
+    
+    # source the primary init
+    # this should set HAS/USE flags and defaults
+    ! . ${APP_USR}/lib/${APP_NAME}/init &&
+        app_exception ${LINENO} fatal "unable to source ${APP_NAME}/init"
+    app_init ||
+        app_exception ${LINENO} fatal "generic fail in primary init"
+    
+    # COMMAND list
+    APP_COMMAND_LIST="$(ls -1 ${APP_USR}/lib/${APP_NAME}/cmd | sed -e "/[^a-z]/d")"
+    
+    # need a valid COMMAND to continue
+    APP_COMMAND="$(echo "${APP_COMMAND_LIST}" | tr " " "\n" | grep "^${1}\$")"
+    [ -z "${APP_COMMAND}" ] &&
+        app_exception ${LINENO} fatal "${1} is not a recognized COMMAND, try \"${APP_SELF} help\""
+    
+    # remove COMMAND from the argument list
+    shift
+    
+    # create INCLUDE and TMP variable
+    APP_INC=${APP_USR}/lib/${APP_NAME}/inc/${APP_COMMAND}
+    APP_TMP="$(mktemp -d)"
+    
+    # source the COMMAND
+    ! . ${APP_USR}/lib/${APP_NAME}/cmd/${APP_COMMAND} &&
+        app_exception ${LINENO} fatal "unable to source COMMAND (${APP_COMMAND})"
+    
+    # check for COMMAND usage invocation
+    app_check_usage "${1}"
+    
+    # init COMMAND
+    app_cmd_init ||
+        app_exception ${LINENO} fatal "generic fail in COMMAND init"
+    
+    # sanity
+    [ -z "${APP_COMMAND_OPTSTR}" ] &&
+        app_exception ${LINENO} fatal "COMMAND ${APP_COMMAND} does not implement an OPTSTRING"
+    
+    # send each opt to the COMMAND handler
+    while getopts "${APP_COMMAND_OPTSTR}" OPT; do
+        app_cmd_opt "${OPT}" "${OPTIND}" "${OPTARG}"
+    done
+    
+    # remove the processed options
+    shift $((OPTIND-1));
+    
+    # send each param to the COMMAND handler
+    for PARAM in "${@}"; do
+        app_cmd_param "${PARAM}"
+    done
+    
+    # last chance for COMMAND to bail before main
+    app_cmd_pre_main ||
+        app_exception ${LINENO} fatal "generic fail in COMMAND pre_main"
+    
+    # run the COMMAND main
+    app_cmd_main ||
+        app_exception ${LINENO} fatal "generic fail in COMMAND main"
+    
+    # COMMAND cleanup, finalization, etc.
+    app_cmd_post_main ||
+        app_exception ${LINENO} fatal "generic fail in COMMAND post_main"
+    
+    # we explicitly add this to trip the EXIT handler
+    exit 0
+
+}
+
+# init main
+app_main "${@}"

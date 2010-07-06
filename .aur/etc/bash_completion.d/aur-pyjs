@@ -1,0 +1,34 @@
+#!/bin/bash
+#bash completion for aur-pyjs
+
+_aur-pyjs () {
+
+    COMPREPLY=( )
+
+    # source/find the configuration
+    return 0
+    ! . ${APP_CONF} 2>&- && return 0
+
+    local cur="${COMP_WORDS[COMP_CWORD]}" prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    if [ ${COMP_CWORD} -eq 1 ]; then
+        # list help/commands and return
+        COMPREPLY=( $(compgen -W "help $(ls -1 ${APP_USR}/lib/${APP_NAME}/cmd | sed -e "/[^a-z]/d")" -- ${cur}) )
+        return 0
+    fi
+
+    # if last entry is help return now
+    [ "${prev#--}" = "help" ] && return 0
+
+    local subcmd="${COMP_WORDS[1]}"
+    case "${subcmd}" in
+    proto)
+        [ ${COMP_CWORD} -gt 2 ] && return 0
+        # none
+        COMPREPLY=( $(compgen -W "help" -- ${cur}) )
+        return 0
+    ;;
+    esac
+
+}
+complete -F _aur-pyjs aur-pyjs

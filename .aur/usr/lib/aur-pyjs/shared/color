@@ -1,0 +1,30 @@
+#!/bin/bash
+
+app_color_gen (){
+    local x
+    for x in "$@"; do echo -en "\e[${x}m"; done
+}
+
+# attributes
+APP_COLOR_BOLD=$(app_color_gen 1)
+APP_COLOR_BLINK=$(app_color_gen 5)
+
+# colors
+APP_COLOR_DEFAULT=$(app_color_gen 0)
+APP_COLOR_BLACK=$(app_color_gen 30)
+APP_COLOR_RED=$(app_color_gen 31)
+APP_COLOR_GREEN=$(app_color_gen 32)
+APP_COLOR_BROWN=$(app_color_gen 33)
+APP_COLOR_BLUE=$(app_color_gen 34)
+APP_COLOR_PURPLE=$(app_color_gen 35)
+APP_COLOR_CYAN=$(app_color_gen 36)
+APP_COLOR_GRAY=$(app_color_gen 37)
+
+# by purpose
+: ${APP_COLOR_SEP:=$(app_color_gen 1 34)}
+: ${APP_COLOR_INFO_PRI:=$(app_color_gen 1 37)}
+: ${APP_COLOR_INFO_SEC:=$(app_color_gen 1 33)}
+: ${APP_COLOR_INFO_TER:=$(app_color_gen 1 35)}
+: ${APP_COLOR_SUCCESS:=$(app_color_gen 1 32)}
+: ${APP_COLOR_WARN:=$(app_color_gen 1 36)}
+: ${APP_COLOR_FATAL:=$(app_color_gen 1 31)}

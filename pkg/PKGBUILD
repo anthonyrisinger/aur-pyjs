@@ -1,6 +1,6 @@
 # Contributor: C Anthony Risinger
 pkgname=aur-pyjs-git
-pkgver=20100630
+pkgver=20100706
 pkgrel=1
 pkgdesc="Implementation of the AUR in python (pyjs)"
 url=http://devel.extof.me/aur-pyjs
@@ -32,9 +32,9 @@ build() {
     fi
 
     msg2 "Building the AUR..."
-    BASE_ALT=${startdir}/.. ${w}/gen || return 1
+    APP_TRANS_BASE_ALT=${startdir}/.. ${w}/aur trans || return 1
 
-    # gen automatically syncs pyjamas if missing; remove if exists
+    # trans automatically syncs pyjs if missing; remove
     rm -rf ${w}/.pyjs
 
 }

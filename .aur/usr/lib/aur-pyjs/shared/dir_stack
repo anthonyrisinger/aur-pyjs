@@ -1,0 +1,4 @@
+#!/bin/bash
+
+spushd () { pushd ${1} >&3; }
+spopd () { popd >&3; }

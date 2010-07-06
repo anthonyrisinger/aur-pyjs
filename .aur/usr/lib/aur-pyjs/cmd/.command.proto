@@ -1,0 +1,154 @@
+#!/bin/bash
+#
+# COMMAND command.proto
+# copy this to include/proto and see it work
+
+# COMMAND init
+app_cmd_init () {
+
+    # includes
+    #. ${APP_USR}/lib/${APP_NAME}/shared/str ||
+    #    app_exception ${LINENO} fatal "unable to source shared/color"
+
+    # required variables
+    APP_COMMAND_OPTSTR=":a:b:c:"
+
+    # COMMAND OPTSTRING/PARAM derived variables
+    : ${APP_PROTO_OPTIONA:="aye"}
+    : ${APP_PROTO_OPTIONB:="bee"}
+    : ${APP_PROTO_OPTIONC:="sea"}
+    : ${APP_PROTO_PARAM:="default"}
+
+    return 0
+
+}
+
+# COMMAND usage
+app_cmd_usage () {
+
+    cat <<EOF
+Usage: ${APP_SELF} ${APP_COMMAND} -a OPTIONA -b OPTIONB -c OPTIONC PARAM
+EOF
+
+    # show extended usage on help
+    [ "${1}" = "${APP_HELP}" ] || return 0
+
+    cat <<EOF
+This is a prototype command used as the basis for other commands
+
+Options:
+   -a   explanation of option a
+   -b   explanation of option b
+   -c   explanation of option c
+Arguments:
+   OPTIONA   definition of argument OPTIONA
+   OPTIONB   definition of argument OPTIONB
+   OPTIONC   definition of argument OPTIONC
+Parameters:
+   PARAM   definition of parameter PARAM
+
+Closing statement with any last words
+EOF
+
+    return 0
+
+}
+
+# COMMAND opts processor
+app_cmd_opt () {
+
+    local opt="${1}" optind="${2}" optarg="${3}"
+    local optiona optionb optionc
+    case "${opt}" in
+    a)
+        optiona="$(echo "${optarg}")"
+        [ -z "${optiona}" ] &&
+            app_exception ${LINENO} fatal "optiona is invalid" ${FUNCNAME}
+        APP_PROTO_OPTIONA=${optiona}
+    ;;
+    b)
+        optionb="$(echo "${optarg}")"
+        [ -z "${optionb}" ] &&
+            app_exception ${LINENO} fatal "optionb is invalid" ${FUNCNAME}
+        APP_PROTO_OPTIONB=${optionb}
+    ;;
+    c)
+        optionc="$(echo "${optarg}")"
+        [ -z "${optionc}" ] &&
+            app_exception ${LINENO} fatal "optionc is invalid" ${FUNCNAME}
+        APP_PROTO_OPTIONC=${optionc}
+    ;;
+    :)
+        app_exception ${LINENO} fatal "option -${optarg} requires an argument" ${FUNCNAME}
+    ;;
+    [?])
+        app_exception ${LINENO} fatal "option -${optarg} is not valid" ${FUNCNAME}
+    ;;
+    esac
+
+    return 0
+
+}
+
+app_cmd_param () {
+
+    # for this COMMAND there is only one param
+    local param="$(echo "${1}")"
+    [ -z "${param}" ] &&
+        app_exception ${LINENO} fatal "param is invalid" ${FUNCNAME}
+    APP_PROTO_PARAM="${param}"
+
+    return 0
+
+}
+
+# COMMAND's last chance to bail out before main
+app_cmd_pre_main () {
+
+    # verify all required variables and pre processing in this block
+    [ -z "${APP_PROTO_OPTIONA}" ] &&
+        app_exception ${LINENO} fatal "optiona is invalid" ${FUNCNAME}
+    [ -z "${APP_PROTO_OPTIONB}" ] &&
+        app_exception ${LINENO} fatal "optionb is invalid" ${FUNCNAME}
+    [ -z "${APP_PROTO_OPTIONC}" ] &&
+        app_exception ${LINENO} fatal "optionc is invalid" ${FUNCNAME}
+
+    return 0
+
+}
+
+# COMMAND main
+app_cmd_main () {
+
+    # if we make it this far, assume everything is ready to rock
+    # register our handler
+    app_register_handle_fatal app_proto_fatal
+
+    app_exception ${LINENO} info "running COMMAND ${APP_COMMAND}" ${FUNCNAME}
+    # do whatever the command actual does in this block
+    echo "Global variables:"
+    set | grep ^APP | sed -e "s/^/   /g"
+
+    return 0
+
+}
+
+app_cmd_post_main () {
+
+    # everything completed successfully, unregister fatal handler
+    app_unregister_handle_fatal app_proto_fatal
+
+    # do any post processing in this block
+    app_exception ${LINENO} info "finished running COMMAND ${APP_COMMAND}" ${FUNCNAME}
+
+    return 0
+
+}
+
+app_proto_fatal () {
+
+    app_exception ${LINENO} warn "running fatality handler for COMMAND ${APP_COMMAND}" ${FUNCNAME}
+
+    return 0
+
+}

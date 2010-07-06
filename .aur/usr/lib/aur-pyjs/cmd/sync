@@ -1,0 +1,161 @@
+#!/bin/bash
+#
+# COMMAND sync
+
+# COMMAND init
+app_cmd_init () {
+
+    # includes
+    . ${APP_USR}/lib/${APP_NAME}/shared/dir_stack ||
+        app_exception ${LINENO} fatal "unable to source shared/dir_stack"
+
+    # required variables
+    APP_COMMAND_OPTSTR=":s:"
+
+    # COMMAND OPTSTRING/PARAM derived variables
+    : ${APP_SYNC_AUR:=true}
+    : ${APP_SYNC_PYJS:=true}
+    : ${APP_SYNC_TARGET:=${APP_BASE%/*}}
+
+    # internal variables
+    : ${APP_SYNC_AUR_REMOTE:=git://github.com/extofme/aur-pyjs.git}
+    : ${APP_SYNC_PYJS_REMOTE:=git://pyjs.org/git/pyjamas.git}
+
+    return 0
+
+}
+
+# COMMAND usage
+app_cmd_usage () {
+
+    cat <<EOF
+Usage: ${APP_SELF} ${APP_COMMAND} [-s REMOTE] [TARGET]
+EOF
+
+    # show extended usage on help
+    [ "${1}" = "${APP_HELP}" ] || return 0
+
+    cat <<EOF
+Update/bootstrap local/TARGET devel sandbox
+
+Options:
+   -s   skip creation or sync with REMOTE
+
+Arguments:
+   REMOTE   either AUR or PYJS (case-insensitive)
+
+Parameters:
+   TARGET   optional alternate sandbox dir
+EOF
+
+    return 0
+
+}
+
+# COMMAND opts processor
+app_cmd_opt () {
+
+    local opt="${1}" optind="${2}" optarg="${3}"
+    case "${opt}" in
+    s)
+        echo "${optarg}" | tr [:upper:] [:lower:] | grep -q '^\(aur\|pyjs\)$' ||
+            app_exception ${LINENO} fatal "only AUR or PYJS are valid arguments (case-insensitive)" ${FUNCNAME}
+        [ ${optarg} = aur ] && APP_SYNC_AUR=false
+        [ ${optarg} = pyjs ] && APP_SYNC_PYJS=false
+    ;;
+    :)
+        app_exception ${LINENO} fatal "option -${optarg} requires an argument" ${FUNCNAME}
+    ;;
+    [?])
+        app_exception ${LINENO} fatal "option -${optarg} is not valid" ${FUNCNAME}
+    ;;
+    esac
+
+    return 0
+
+}
+
+app_cmd_param () {
+
+    # only one param
+    local target="${1}"
+    [ -z "${target}" ] &&
+        app_exception ${LINENO} fatal "TARGET dir is invalid" ${FUNCNAME}
+    APP_SYNC_TARGET="${target}"
+
+    return 0
+
+}
+
+# COMMAND's last chance to bail out before main
+app_cmd_pre_main () {
+
+    # verify all required variables and pre processing in this block
+    [ -d ${APP_SYNC_TARGET} ] ||
+        mkdir -p ${APP_SYNC_TARGET} ||
+        app_exception ${LINENO} fatal "unable to create TARGET dir"
+
+    return 0
+
+}
+
+# COMMAND main
+app_cmd_main () {
+
+    # if we make it this far, assume everything is ready to rock
+    # register our handler
+    app_register_handle_fatal app_sync_fatal
+
+    spushd ${APP_SYNC_TARGET} ||
+        app_exception ${LINENO} fatal "unable to switch to TARGET dir"
+
+    if ${APP_SYNC_AUR} && ! [ -e .git ]; then
+        git clone ${APP_SYNC_AUR_REMOTE} . ||
+            app_exception ${LINENO} fatal "unable to clone aur-pyjs"
+    fi
+
+    if ${APP_SYNC_PYJS}; then
+        app_sync_create_or_update_sandbox ||
+            app_exception ${LINENO} fatal "generic sandbox error"
+    fi
+
+    spopd
+
+    return 0
+
+}
+
+app_cmd_post_main () {
+
+    # everything completed successfully, unregister fatal handler
+    app_unregister_handle_fatal app_sync_fatal
+
+    return 0
+
+}
+
+app_sync_create_or_update_sandbox () {
+
+    if [ -e .pyjs/.git ]; then
+        git --git-dir=.pyjs/.git pull ||
+            app_exception ${LINENO} fatal "unable to update pyjs"
+    else
+        git clone ${APP_SYNC_PYJS_REMOTE} .pyjs ||
+            app_exception ${LINENO} fatal "unable to clone pyjs"
+    fi  
+
+    # run bootstrap everytime
+    spushd .pyjs
+    make local-build ||
+        app_exception ${LINENO} fatal "unable to bootstrap pyjs"
+    spopd
+
+    return 0
+
+}
+
+app_sync_fatal () {
+
+    return 0
+
+}

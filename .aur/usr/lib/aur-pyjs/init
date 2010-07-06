@@ -1,0 +1,14 @@
+#!/bin/bash
+
+app_init () {
+
+    # set debug
+    : ${APP_DEBUG:=false}
+    { echo "${APP_DEBUG}" | grep -q "^\(true\|false\)\$"; } || APP_DEBUG=false
+
+    APP_HAS_FOO=true
+    APP_HAS_BAR=false
+
+    return 0
+
+}

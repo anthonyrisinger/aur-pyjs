@@ -1,0 +1,150 @@
+#!/bin/bash
+#
+# COMMAND serve
+
+# COMMAND init
+app_cmd_init () {
+
+    # includes
+    . ${APP_USR}/lib/${APP_NAME}/shared/dir_stack ||
+        app_exception ${LINENO} fatal "unable to source shared/dir_stack"
+
+    # required variables
+    APP_COMMAND_OPTSTR=":p:f"
+
+    # COMMAND OPTSTRING/PARAM derived variables
+    : ${APP_SERVE_FORK:=true}
+    : ${APP_SERVE_PORT:=8000}
+
+    # internal variables
+    : ${APP_SERVE_BASE:=${APP_BASE%/*}}
+
+    return 0
+
+}
+
+# COMMAND usage
+app_cmd_usage () {
+
+    cat <<EOF
+Usage: ${APP_SELF} ${APP_COMMAND} [-f] [-p PORT]
+EOF
+
+    # show extended usage on help
+    [ "${1}" = "${APP_HELP}" ] || return 0
+
+    cat <<EOF
+Run the local AUR3 build (static files only at the moment)
+
+Options:
+   -f   optionally run in foreground (do not fork)
+   -p   run server on PORT instead of default (8000)
+
+Arguments:
+   PORT   valid port integer
+EOF
+
+    return 0
+
+}
+
+# COMMAND opts processor
+app_cmd_opt () {
+
+    local opt="${1}" optind="${2}" optarg="${3}"
+    local port
+    case "${opt}" in
+    f)
+        APP_SERVE_FORK=false
+    ;;
+    p)
+        echo "${optarg}" | grep -q '^[0-9]*$' ||
+            app_exception ${LINENO} fatal "port must be an integer" ${FUNCNAME}
+        [ -z "${optarg}" ] &&
+            app_exception ${LINENO} fatal "port cannot be empty" ${FUNCNAME}
+        [ ${optarg} -lt 0 -o ${optarg} -gt 65535 ] &&
+            app_exception ${LINENO} fatal "port out of range (0-65535)" ${FUNCNAME}
+        APP_SERVE_PORT=${optarg}
+    ;;
+    :)
+        app_exception ${LINENO} fatal "option -${optarg} requires an argument" ${FUNCNAME}
+    ;;
+    [?])
+        app_exception ${LINENO} fatal "option -${optarg} is not valid" ${FUNCNAME}
+    ;;
+    esac
+
+    return 0
+
+}
+
+app_cmd_param () {
+
+    # no params
+    app_exception ${LINENO} fatal "COMMAND does not accept parameters" ${FUNCNAME}
+
+    return 0
+
+}
+
+# COMMAND's last chance to bail out before main
+app_cmd_pre_main () {
+
+    # verify all required variables and pre processing in this block
+
+    return 0
+
+}
+
+# COMMAND main
+app_cmd_main () {
+
+    # if we make it this far, assume everything is ready to rock
+    # register our handler
+    app_register_handle_fatal app_serve_fatal
+
+    spushd ${APP_SERVE_BASE}/out
+
+    local k="$(which kill)" pid pidfile="${APP_VAR}/run/${APP_SELF}-cmd-serve-${APP_SERVE_PORT}.pid"
+    if [ -e "${pidfile}" ]; then
+        pid="$(< ${pidfile})"
+        ${k} -0 ${pid} 2>&3 &&
+            ${k} ${pid} &&
+            { while ps -p ${pid} >&3; do sleep 1; done; } ||
+            rm -f ${pidfile}
+    fi
+
+    if ${APP_SERVE_FORK}; then
+        app_exception ${LINENO} info "forking server to background..." ${FUNCNAME}
+        python -m SimpleHTTPServer ${APP_SERVE_PORT} >&3 2>&1 &
+        pid=${!}
+        ${k} -0 ${pid} 2>&3 ||
+            app_exception ${LINENO} fatal "problem running/forking server" ${FUNCNAME}
+        echo -n ${pid} > ${APP_VAR}/run/${APP_SELF}-cmd-serve-${APP_SERVE_PORT}.pid
+        app_exception ${LINENO} info "pid ${pid}" ${FUNCNAME}
+    else
+        app_exception ${LINENO} info "running in foreground..." ${FUNCNAME}
+        python -m SimpleHTTPServer ${APP_SERVE_PORT} ||
+            app_exception ${LINENO} fatal "problem running server" ${FUNCNAME}
+    fi
+
+    spopd
+
+    return 0
+
+}
+
+app_cmd_post_main () {
+
+    # everything completed successfully, unregister fatal handler
+    app_unregister_handle_fatal app_serve_fatal
+
+    return 0
+
+}
+
+app_serve_fatal () {
+
+    return 0
+
+}

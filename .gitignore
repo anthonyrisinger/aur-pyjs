@@ -2,3 +2,4 @@
 *.swp
 /.pyjs
 /out
+/.aur/var/run/*.pid

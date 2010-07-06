@@ -1,0 +1,145 @@
+#!/bin/bash
+#
+# COMMAND trans
+
+# COMMAND init
+app_cmd_init () {
+
+    # includes
+    . ${APP_USR}/lib/${APP_NAME}/shared/dir_stack ||
+        app_exception ${LINENO} fatal "unable to source shared/dir_stack"
+
+    # required variables
+    APP_COMMAND_OPTSTR=":"
+
+    # COMMAND OPTSTRING/PARAM derived variables
+
+    # internal variables
+    : ${APP_TRANS_BASE:=${APP_BASE%/*}}
+    : ${APP_TRANS_BASE_ALT:=${APP_TRANS_BASE}}
+    : ${APP_TRANS_EXEC:=}
+
+    return 0
+
+}
+
+# COMMAND usage
+app_cmd_usage () {
+
+    cat <<EOF
+Usage: ${APP_SELF} ${APP_COMMAND}
+EOF
+
+    # show extended usage on help
+    [ "${1}" = "${APP_HELP}" ] || return 0
+
+    cat <<EOF
+Translate python sources into javascript for deployment.
+
+COMMAND does not accept any options or parameters.
+EOF
+
+    return 0
+
+}
+
+# COMMAND opts processor
+app_cmd_opt () {
+
+    local opt="${1}" optind="${2}" optarg="${3}"
+    case "${opt}" in
+    *)
+        app_exception ${LINENO} fatal "COMMAND does not accept any options" ${FUNCNAME}
+    ;;
+    :)
+        app_exception ${LINENO} fatal "option -${optarg} requires an argument" ${FUNCNAME}
+    ;;
+    [?])
+        app_exception ${LINENO} fatal "option -${optarg} is not valid" ${FUNCNAME}
+    ;;
+    esac
+
+    return 0
+
+}
+
+app_cmd_param () {
+
+    # no params
+    app_exception ${LINENO} fatal "COMMAND does not accept any parameters" ${FUNCNAME}
+
+    return 0
+
+}
+
+# COMMAND's last chance to bail out before main
+app_cmd_pre_main () {
+
+    # verify all required variables and pre processing in this block
+
+    # only if env doesn't exist
+    if ! [ -x "${APP_TRANS_EXEC}" ]; then
+        local possible=(
+            "${APP_TRANS_BASE}/.pyjs/bin/pyjsbuild"     # local
+            "${APP_TRANS_BASE_ALT}/.pyjs/bin/pyjsbuild" # parent
+            "$(which pyjsbuild 2>&-)"                   # system
+        )
+        for x in "${possible[@]}"; do
+            if [ -x "${x}" ]; then
+                APP_TRANS_EXEC=${x}
+                break
+            fi  
+        done
+    fi
+
+    # last try
+    if ! [ -x "${APP_TRANS_EXEC}" ]; then
+        ${APP_REAL} sync -s aur ||
+            app_exception ${LINENO} fatal "could not find PYJS (pyjsbuild)" ${FUNCNAME}
+        APP_TRANS_EXEC="${APP_TRANS_BASE}/.pyjs/bin/pyjsbuild"
+    fi
+
+    return 0
+
+}
+
+# COMMAND main
+app_cmd_main () {
+
+    # if we make it this far, assume everything is ready to rock
+    # register our handler
+    app_register_handle_fatal app_trans_fatal
+
+    spushd ${APP_TRANS_BASE}
+
+    # don't remove the folder; serve could be running
+    rm -rf out/*
+
+    # build AUR
+    spushd src 
+    ${APP_TRANS_EXEC} -mcO --bootstrap-file='Aur.js' --output='../out' Aur.py
+    spopd
+
+    # copy pub folder to out
+    cp -R pub/* out
+
+    spopd
+
+    return 0
+
+}
+
+app_cmd_post_main () {
+
+    # everything completed successfully, unregister fatal handler
+    app_unregister_handle_fatal app_trans_fatal
+
+    return 0
+
+}
+
+app_trans_fatal () {
+
+    return 0
+
+}
