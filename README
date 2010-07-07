@@ -8,16 +8,13 @@ QUICKSTART
 1) install
      # http://aur.archlinux.org/packages.php?ID=38359
 2) run
-     # /usr/lib/aur-pyjs-git/dev
+     # /usr/lib/aur-pyjs-git/aur serve -f
 3) view
      # http://127.0.0.1:8000/Aur.html
 
 INTRODUCTION
 
-This is a reimplementation of the AUR using a widget toolkit known as Pyjamas (http://pyjs.org).  Client-side code (to run in web 
-browsers) is written and maintained in python; when deploying to production, the python sources are compiled/translated to 100% 
-pure javascript.  The resulting javascript code can be ran on any major browser.  When deployed, this is a 100% pure javascript 
-application... thus, javascript is required, else you will see only a blank page.
+This is a reimplementation of the AUR using a widget toolkit known as Pyjamas (http://pyjs.org).  Client-side code (to run in web browsers) is written and maintained in python; when deploying to production, the python sources are compiled/translated to 100% pure javascript.  The resulting javascript code can be ran on any major browser.  When deployed, this is a 100% pure javascript application... thus, javascript is required, else you will see only a blank page.
 
 WHY PYJS?
 
@@ -89,18 +86,44 @@ PYJAMAS-DESKTOP ONLY (as python)
 GET INVOLVED
 
 1) set up a development environment + pyjs sandbox at ~/aur-pyjs...
-     # /usr/lib/aur-pyjs-git/init
+     # /usr/lib/aur-pyjs-git/aur sync ~/aur-pyjs
+     # cd ~/aur-pyjs
 2) update pyjamas anytime by running...
-     # ~/aur-pyjs/init
+     # ./aur sync
 3) generate the AUR...
-     # ~/aur-pyjs/gen
+     # ./aur trans
 4) view the AUR...
-     # ~/aur-pyjs/dev
+     # ./aur serve -f
      # http://127.0.0.1:8000/Aur.html
-5) create a package based off your local git master...
-     # ~/aur-pyjs/install
-6) create a package based off your local git master AND install it...
-     # ~/aur-pyjs/install true
+5) create a package based on remote git master...
+     # ./aur pkg
+6) create a package based on your local git master...
+     # ./aur pkg -l
+7) create a package based on your local git master AND install it...
+     # ./aur pkg -li
+
+All of the commands support a 'help' and 'usage' parameter:
+
+----------------------------------------
+# ./aur help
+Usage: aur-pyjs COMMAND [help|OPTION]...
+Develop, translate, package, and serve AUR3
+
+COMMANDs:
+   pkg     build package from local/remote master; opt. install; opt. upload
+   sync    bootstrap/update local/target devel environment
+   trans   translate python sources to javascript for deployment
+   serve   lastest local build at http://localhost:8000
+
+# ./aur pkg help
+Usage: aur-pyjs pkg [-l] [-i] [-u]
+Package local/remote build and optionally install and/or upload to AUR legacy
+
+Options:
+   -l   favor local source over remote
+   -i   install package locally
+   -u   upload to AUR legacy after building
+----------------------------------------
 
 LAST WORDS
 
@@ -112,7 +135,7 @@ no.  project is not a revived incarnation of other attempts
 
 ) advanced search will be restricted
 ) SOMEONE CAN START BUILDING JSON-RPC BACKENDS NOW
-) PHP and MySQL s_ck.   If I do it, the back-ends will be python ( + sqlite or couchdb)
+) PHP and MySQL s_ck.   If I do it, the back-ends will be python ( + git/sqlite/couchdb)
 
 ) feedback appreciated
 ) to contribute, fork on github and send me a request.
@@ -121,4 +144,4 @@ C Anthony
 
 [1] http://bbs.archlinux.org/viewtopic.php?id=90970
 
-licence [GPL2]
+[license GPL2]
