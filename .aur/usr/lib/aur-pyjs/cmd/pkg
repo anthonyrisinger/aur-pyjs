@@ -18,7 +18,6 @@ app_cmd_init () {
     : ${APP_PKG_UPLOAD:=false}
 
     # internal variables
-    : ${APP_PKG_MAKEPKG_OPTS:=}
     : ${APP_PKG_BASE:=${APP_BASE%/*}}
     : ${APP_PKG_TARGET_SRC:='aur-pyjs*.src.tar.*'}
     : ${APP_PKG_TARGET_PKG:='aur-pyjs*.pkg.tar.*'}
@@ -90,8 +89,6 @@ app_cmd_param () {
 app_cmd_pre_main () {
 
     # verify all required variables and pre processing in this block
-    ${APP_PKG_INSTALL} &&
-        APP_PKG_MAKEPKG_OPTS=-i
 
     [ -d ${APP_PKG_BASE} ] ||
         app_exception ${LINENO} fatal "base directory (${APP_PKG_BASE}) does not exist"
@@ -117,10 +114,22 @@ app_cmd_main () {
         app_exception ${LINENO} fatal "unable to switch to package dir (${APP_PKG_BASE}/pkg)"
  
     rm -f ${APP_PKG_TARGET_SRC} ${APP_PKG_TARGET_PKG}
-    ${APP_PKG_BUILD_LOCAL} && [ -e "${APP_PKG_BASE}/.git" ] && export _gitroot="${APP_PKG_BASE}"
-    PKGDEST="${APP_PKG_BASE}/pkg" makepkg -d ${APP_PKG_MAKEPKG_OPTS} ||
+
+    if ${APP_PKG_BUILD_LOCAL} && [ -e "${APP_PKG_BASE}/.git" ]; then
+        app_exception ${LINENO} info "syncing with local master..." ${FUNCNAME}
+        export _gitroot="${APP_PKG_BASE}"
+    fi
+
+    PKGDEST="${APP_PKG_BASE}/pkg" makepkg -d ||
         app_exception ${LINENO} fatal "package build failed"
+
+    if ${APP_PKG_INSTALL}; then
+        app_exception ${LINENO} info "installing package..." ${FUNCNAME}
+        sudo pacman -Ud ${APP_PKG_TARGET_PKG}
+    fi
+
     if ${APP_PKG_UPLOAD}; then
+        app_exception ${LINENO} info "uploading to AUR legacy..." ${FUNCNAME}
         app_pkg_aur_upload ${APP_PKG_TARGET_SRC} ||
             app_exception ${LINENO} error "upload to AUR legacy failed"
     fi
