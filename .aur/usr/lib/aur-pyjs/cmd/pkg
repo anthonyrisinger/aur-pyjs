@@ -10,9 +10,10 @@ app_cmd_init () {
         app_exception ${LINENO} fatal "unable to source shared/dir_stack"
 
     # required variables
-    APP_COMMAND_OPTSTR=":iu"
+    APP_COMMAND_OPTSTR=":liu"
 
     # COMMAND OPTSTRING/PARAM derived variables
+    : ${APP_PKG_BUILD_LOCAL:=false}
     : ${APP_PKG_INSTALL:=false}
     : ${APP_PKG_UPLOAD:=false}
 
@@ -31,7 +32,7 @@ app_cmd_init () {
 app_cmd_usage () {
 
     cat <<EOF
-Usage: ${APP_SELF} ${APP_COMMAND} [-i] [-u] 
+Usage: ${APP_SELF} ${APP_COMMAND} [-l] [-i] [-u]
 EOF
 
     # show extended usage on help
@@ -41,6 +42,7 @@ EOF
 Package local/remote build and optionally install and/or upload to AUR legacy
 
 Options:
+   -l   favor local source over remote
    -i   install package locally
    -u   upload to AUR legacy after building
 EOF
@@ -54,6 +56,9 @@ app_cmd_opt () {
 
     local opt="${1}" optind="${2}" optarg="${3}"
     case "${opt}" in
+    l)
+        APP_PKG_BUILD_LOCAL=true
+    ;;
     i)
         APP_PKG_INSTALL=true
     ;;
@@ -112,7 +117,7 @@ app_cmd_main () {
         app_exception ${LINENO} fatal "unable to switch to package dir (${APP_PKG_BASE}/pkg)"
  
     rm -f ${APP_PKG_TARGET_SRC} ${APP_PKG_TARGET_PKG}
-    [ -e "${APP_PKG_BASE}/.git" ] && export _gitroot="${APP_PKG_BASE}"
+    ${APP_PKG_BUILD_LOCAL} && [ -e "${APP_PKG_BASE}/.git" ] && export _gitroot="${APP_PKG_BASE}"
     PKGDEST="${APP_PKG_BASE}/pkg" makepkg -d ${APP_PKG_MAKEPKG_OPTS} ||
         app_exception ${LINENO} fatal "package build failed"
     if ${APP_PKG_UPLOAD}; then

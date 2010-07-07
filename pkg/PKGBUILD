@@ -1,6 +1,6 @@
 # Contributor: C Anthony Risinger
 pkgname=aur-pyjs-git
-pkgver=20100706
+pkgver=20100707
 pkgrel=1
 pkgdesc="Implementation of the AUR in python (pyjs)"
 url=http://devel.extof.me/aur-pyjs
