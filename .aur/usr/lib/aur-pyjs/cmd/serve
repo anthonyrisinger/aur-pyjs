@@ -39,7 +39,6 @@ Run the local AUR3 build (static files only at the moment)
 Options:
    -f   optionally run in foreground (do not fork)
    -p   run server on PORT instead of default (8000)
-
 Arguments:
    PORT   valid port integer
 EOF

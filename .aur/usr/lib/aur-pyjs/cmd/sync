@@ -40,10 +40,8 @@ Update/bootstrap local/TARGET devel sandbox
 
 Options:
    -s   skip creation or sync with REMOTE
-
 Arguments:
    REMOTE   either AUR or PYJS (case-insensitive)
-
 Parameters:
    TARGET   optional alternate sandbox dir
 EOF
