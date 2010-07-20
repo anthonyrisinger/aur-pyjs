@@ -330,105 +330,115 @@ function __pygwt_earlyUser() {
 
     var body = document.getElementsByTagName('body')[0]
 
-    var modStarted = 0
-    var modLoaded = 0
-    var progressTarget = 0
-    var progressCurrent = 0
-
-    var aurCont = elem('div')
-    var aurHeader = elem('div')
-    var aurLogo = elem('img')
-    var aurProgressBar = elem('div')
-    var aurStatus = elem('div')
-
-    var redraw = {}
-    var redrawTargets = {}
+    var mod = {
+        started: 0,
+        loaded: 0
+    }
+    var progress = {
+        target: 0,
+        current: 0,
+        accel: 0,
+        lastUpdate: new Date().getTime()
+    }
+    var aur = {
+        cont: elem('div'),
+        header: elem('div'),
+        logo: elem('img'),
+        progressBar: elem('div'),
+        status: elem('div')
+    }
+    var redraw = {
+        id: setInterval(function() { for(var t in redraw.active) if(redraw.active[t]) redraw.target[t]() } , guiRefreshRate),
+        active: {},
+        target: {}
+    }
 
     body.style.overflow = 'hidden'
-    aurCont.style.backgroundColor = 'white'
-    aurCont.style.textAlign = 'left'
-    aurCont.style.position = 'absolute'
-    aurCont.style.top = '0px'
-    aurCont.style.right = '0px'
-    aurCont.style.bottom = '0px'
-    aurCont.style.left = '0px'
-    aurHeader.style.position = 'relative'
-    aurHeader.style.backgroundColor = '#333'
-    aurLogo.style.position = 'relative'
-    aurLogo.style.opacity = 0
-    aurLogo.style.filter = 'alpha(opacity=0)'
-    aurLogo.style.marginTop = '10px'
-    aurLogo.style.marginLeft = '15px'
-    aurLogo.style.marginBottom = '15px'
-    aurLogo.style.height = '40px'
-    aurProgressBar.style.position = 'absolute'
-    aurProgressBar.style.bottom = '0px'
-    aurProgressBar.style.height = '5px'
-    aurProgressBar.style.lineHeight = '5px'
-    aurProgressBar.style.maxHeight = '5px'
-    aurProgressBar.style.width = '0px'
-    aurProgressBar.style.backgroundColor = '#08C'
-    aurStatus.style.position = 'absolute'
-    aurStatus.style.top = '104%'
-    aurStatus.style.left = '4px'
-    aurStatus.style.fontSize = '0.8em'
-    aurStatus.style.fontWeight = 'bold'
+    aur.cont.style.backgroundColor = 'white'
+    aur.cont.style.textAlign = 'left'
+    aur.cont.style.position = 'absolute'
+    aur.cont.style.top = '0px'
+    aur.cont.style.right = '0px'
+    aur.cont.style.bottom = '0px'
+    aur.cont.style.left = '0px'
+    aur.header.style.position = 'relative'
+    aur.header.style.backgroundColor = '#333'
+    aur.logo.style.position = 'relative'
+    aur.logo.style.opacity = 0
+    aur.logo.style.filter = 'alpha(opacity=0)'
+    aur.logo.style.marginTop = '10px'
+    aur.logo.style.marginLeft = '15px'
+    aur.logo.style.marginBottom = '15px'
+    aur.logo.style.height = '40px'
+    aur.progressBar.style.position = 'absolute'
+    aur.progressBar.style.bottom = '0px'
+    aur.progressBar.style.height = '5px'
+    aur.progressBar.style.lineHeight = '5px'
+    aur.progressBar.style.maxHeight = '5px'
+    aur.progressBar.style.width = '0px'
+    aur.progressBar.style.backgroundColor = '#08C'
+    aur.status.style.position = 'absolute'
+    aur.status.style.top = '104%'
+    aur.status.style.left = '4px'
+    aur.status.style.fontSize = '0.8em'
+    aur.status.style.fontWeight = 'bold'
 
     /* add to DOM */
-    aurLogo.setAttribute('src', 'http://www.archlinux.org/media/archnavbar/archlogo.gif')
-    aurStatus.appendChild(txt('Initializing...'))
+    aur.logo.setAttribute('src', 'http://www.archlinux.org/media/archnavbar/archlogo.gif')
+    aur.status.appendChild(txt('Initializing...'))
 
-    body.appendChild(aurCont)
-    aurCont.appendChild(aurHeader)
-    aurHeader.appendChild(aurLogo)
-    aurHeader.appendChild(aurStatus)
-    aurHeader.appendChild(aurProgressBar)
-
-    var redrawId = setInterval(
-        function() { for(var t in redraw) if(redraw[t]) redrawTargets[t]() } , guiRefreshRate
-    )
+    body.appendChild(aur.cont)
+    aur.cont.appendChild(aur.header)
+    aur.header.appendChild(aur.logo)
+    aur.header.appendChild(aur.status)
+    aur.header.appendChild(aur.progressBar)
 
     var init = function() {
-        while(aurStatus.hasChildNodes()) aurStatus.removeChild(aurStatus.firstChild)
-        aurStatus.appendChild(txt('Loading...'))
+        while(aur.status.hasChildNodes()) aur.status.removeChild(aur.status.firstChild)
+        aur.status.appendChild(txt('Loading...'))
     }
 
     var load = function() {
-        while(aurStatus.hasChildNodes()) aurStatus.removeChild(aurStatus.firstChild)
-        aurStatus.appendChild(txt('Complete'))
-        redraw.fade = true
+        while(aur.status.hasChildNodes()) aur.status.removeChild(aur.status.firstChild)
+        aur.status.appendChild(txt('Complete'))
+        redraw.active.fade = true
     }
 
     var kill = function() {
-        clearInterval(redrawId)
-        body.removeChild(aurCont)
+        clearInterval(redraw.id)
+        body.removeChild(aur.cont)
         body.style.overflow = 'auto'
     }
 
-    redrawTargets.progress = function() {
-            progressTarget = modLoaded/modStarted
-            progressCurrent = progressCurrent + ((progressTarget-progressCurrent)*0.1)
-            aurLogo.style.opacity = progressCurrent
-            aurLogo.style.filter = 'alpha(opacity=' + progressCurrent*100 + ')'
-            aurProgressBar.style.width = String(progressCurrent*100) + '%'
+    redraw.target.progress = function(app, module) {
+            if(app && module) {
+                var end = app.modules.list[module].end
+                if((end-redraw.lastUpdate)<guiRefreshRate) { return }
+                else { redraw.lastUpdate = end }
+            }
+            redraw.active.progress = true
+            progress.target = mod.loaded/mod.started
+            progress.accel = (progress.target - progress.current)/3
+            progress.current = progress.current + progress.accel
+            aur.logo.style.opacity = progress.current
+            aur.logo.style.filter = 'alpha(opacity=' + progress.current*100 + ')'
+            aur.progressBar.style.width = String(progress.current*100) + '%'
     }
 
-    redrawTargets.fade = function() {
+    redraw.target.fade = function() {
             var c = this.fade.curr, s = this.fade.step
             if(c<=0) { kill(); return }
-            aurCont.style.opacity = c/s
-            aurCont.style.filter = 'alpha(opacity=' + c/s*100 + ')'
+            aur.cont.style.opacity = c/s
+            aur.cont.style.filter = 'alpha(opacity=' + c/s*100 + ')'
             this.fade.curr--
     }
-    redrawTargets.fade.step = redrawTargets.fade.curr = fadeStep
+    redraw.target.fade.step = redraw.target.fade.curr = fadeStep
 
     __pygwt_modController.addListener('init', init)
-    __pygwt_modController.addListener('moduleInit', function(a, m) { modStarted++ })
-    __pygwt_modController.addListener('moduleLoad', function(a, m) { modLoaded++ })
+    __pygwt_modController.addListener('moduleInit', function(a, m) { mod.started++ })
+    __pygwt_modController.addListener('moduleLoad', function(a, m) { mod.loaded++; redraw.target.progress(a, m) })
     __pygwt_modController.addListener('load', load)
     __pygwt_modController.addListener('hookException', kill)
-
-    redraw.progress = true
 
 }
 
