@@ -113,6 +113,7 @@ app_cmd_main () {
             rm -f ${pidfile}
     fi
 
+    app_exception ${LINENO} info "serving directory: $(pwd)" ${FUNCNAME}
     if ${APP_SERVE_FORK}; then
         app_exception ${LINENO} info "forking server to background..." ${FUNCNAME}
         python -m SimpleHTTPServer ${APP_SERVE_PORT} >&3 2>&1 &
