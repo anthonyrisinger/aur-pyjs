@@ -28,7 +28,6 @@ var __pygwt_onLoadError = function (exception, name) {
 
 };
 
-
 function __pygwt_processMetas() {
   var metas = document.getElementsByTagName("meta");
   for (var i = 0, n = metas.length; i < n; ++i) {
@@ -177,107 +176,266 @@ function __pygwt_injectWebModeFrame(name) {
 // Module Load Controller
 //
 var __pygwt_modController = {
-    _app: {
+    __apps: {
         block: 0,
         list: {}
     },
-    _onInitListeners: [],
-    _onAppInitListeners: [],
-    _onAppLoadListeners: [],
-    _onModuleInitListeners: [],
-    _onModuleLoadListeners: [],
-    _onLoadListeners: [],
-    _onInit: function() {
-        var l = this._onInitListeners
-        for(var i in l) l[i]()
-        this._onInit = function(){}
-    },
-    _onAppInit: function(appName) {
-        var a = this._app.list[appName], l = this._onAppInitListeners
-        for(var i in l) l[i](a)
-    },
-    _onAppLoad: function(appName) {
-        var a = this._app.list[appName], l = this._onAppLoadListeners
-        for(var i in l) l[i](a)
-        __pygwt_webModeFrameOnLoad(a.appWindow, appName)
-    },
-    _onModuleInit: function(appName, module) {
-        var a = this._app.list[appName], l = this._onModuleInitListeners
-        for(var i in l) l[i](a, module)
-    },
-    _onModuleLoad: function(appName, module) {
-        var a = this._app.list[appName], l = this._onModuleLoadListeners
-        for(var i in l) l[i](a, module)
-    },
-    _onLoad: function() {
-        var a = this._app.list, l = this._onLoadListeners
-        for(var i in l) l[i](a)
-    },
-    _initModule: function(appName, module) {
-        var app = this._app.list[appName]
-        var doc = app.appWindow.document
-        var s = doc.createElement('script')
-        s.onload = function() { __pygwt_modController._loadModule(appName, module) }
-        s.type = 'text/javascript'
-        s.src = module
-        app.modules.init(module)
-        doc.getElementsByTagName('head')[0].appendChild(s)
-        this._onModuleInit(appName, module)
-    },
-    _loadModule: function(appName, module) {
-        var app = this._app.list[appName]
-        app.modules.load(module)
-        this._onModuleLoad(appName, module)
-        if(app.modules.block==0) {
-            this._app.block--
-            this._onAppLoad(appName)
-            if(this._app.block==0) this._onLoad()
+    __listeners: {
+        disabled: {},
+        list: {
+            init: [],
+            appInit: [],
+            moduleInit: [],
+            moduleLoad: [],
+            appLoad: [],
+            load: [],
+            hookException: []
         }
     },
-    init: function(appName, appWindow) {
-        this._onInit()
-        this._app.list[appName] = {
-            appWindow: appWindow,
-            appName: appName,
+    _get: function(type, item) {
+        type = '__' + type
+        if(!(type in this))
+            return false
+        if(!('list' in this[type]))
+            return false
+        if(!item)
+            return this[type].list
+        if(item in this[type].list)
+            return this[type].list[item]
+        return false
+    },
+    _onEvent: function(event, name, module) {
+        var l = this._get('listeners', event)
+        if(!l || this.__listeners.disabled[event])
+            return false
+        var app = this._get('apps', name)
+        try {
+            for(var i in l) if(l[i]) l[i](app, module)
+        } catch(e) {
+            try {
+                var l = this._get('listeners', 'hookException')
+                if(l) for(var i in l) if(l[i]) l[i](e)
+            } catch(e) { /* console.log(e) */ }
+        }
+        if(event=='init' || event=='load')
+            this.__listeners.disabled[event] = true
+        if(event=='appLoad')
+            __pygwt_webModeFrameOnLoad(app.reference, app.name)
+    },
+    _initApp: function(name, win) {
+        this._onEvent('init')
+        this.__apps.list[name] = {
+            name: name,
+            reference: win,
+            loaded: false,
             modules: {
                 list: {},
                 block: 0,
                 init: function(module) {
-                    m = this.list[module] = {}
+                    var m = this.list[module] = {}
                     m.start = new Date().getTime()
                     this.block++
                 },
                 load: function(module){
-                    m = this.list[module]
+                    var m = this.list[module]
                     m.end = new Date().getTime()
                     m.duration = m.end - m.start
                     this.block--
                 }
             }
         }
-        this._app.block++
-        this._onAppInit(appName)
+        this.__apps.block++
+        this._onEvent('appInit', name)
     },
-    load: function(appName, modules) {
-        var i, f = function(a, m) { setTimeout("__pygwt_modController._initModule('" + a + "', '" + m + "')", 1) }
-        for(i in modules) { f(appName, modules[i]) }
-        if(i===undefined) f(appName, modules)
+    _initModule: function(name, module) {
+        var app = this._get('apps', name)
+        var doc = app.reference.document
+        var s = doc.createElement('script')
+        s.onload = s.onreadystatechange = function() {
+            if(s.onload.fired)
+                return
+            if(!s.readyState || s.readyState == 'loaded' || s.readyState == 'complete') {
+                s.onload.fired = true
+                __pygwt_modController._loadModule(name, module)
+            }
+        }
+        s.onload.fired = false
+        s.type = 'text/javascript'
+        s.src = module
+        doc.getElementsByTagName('head')[0].appendChild(s)
+        this._onEvent('moduleInit', name, module)
     },
-    addListener: function(type, listener) {
-        var l = '_on' + type + 'Listeners', bool = l in this
-        if(bool) return this[l].push(listener)-1
+    _loadModule: function(name, module) {
+        var app = this._get('apps', name)
+        app.modules.load(module)
+        this._onEvent('moduleLoad', name, module)
+        if(app.modules.block==0) this._loadApp(name)
+    },
+    _loadApp: function(name) {
+        var app = this._get('apps', name)
+        if(!app.loaded && app.modules.block==0) {
+            app.loaded = true
+            this.__apps.block--
+            this._onEvent('appLoad', name)
+            if(this.__apps.block==0) this._onEvent('load')
+        }
+    },
+    init: function(name, win) {
+        this._initApp(name, win)
+    },
+    load: function(name, modules) {
+        var i, app = this._get('apps', name)
+        var f = function(a, m) {
+            setTimeout(function(){
+                __pygwt_modController._initModule(a, m)
+                a=null; m=null
+            }, 1)
+            app.modules.init(m)
+        }
+        for(i in modules) if(modules[i]) f(name, modules[i])
+        if(i===undefined && modules) f(name, modules)
+    },
+    done: function(name) {
+        this._loadApp(name)
+    },
+    addListener: function(event, listener) {
+        var list = this._get('listeners', event)
+        if(list)
+            return list.push(listener)-1
         return false
     },
-    removeListener: function(type, idx) {
-        var l = '_on' + type + 'Listeners', bool = l in this
-        if(bool) return this[l].splice(idx, 1)
+    removeListener: function(event, target) {
+        var list = this._get('listeners', event)
+        if(!list)
+            return false
+        if(target in list)
+            return list.splice(target, 1, false)
+        for(var i in list)
+            if(target===list[i])
+                return list.splice(i, 1, false)
         return false
     }
 }
 
 //////////////////////////////////////////////////////////////////
+// Early user custom routines
+//
+function __pygwt_earlyUser() {
+
+    var guiRefreshRate = 50
+    var fadeStep = 20
+
+    var elem = function(e) { return document.createElement(e) }
+    var txt = function(t) { return document.createTextNode(t) }
+
+    var body = document.getElementsByTagName('body')[0]
+
+    var modStarted = 0
+    var modLoaded = 0
+    var progressTarget = 0
+    var progressCurrent = 0
+
+    var aurCont = elem('div')
+    var aurHeader = elem('div')
+    var aurLogo = elem('img')
+    var aurProgressBar = elem('div')
+    var aurStatus = elem('div')
+
+    var redraw = {}
+    var redrawTargets = {}
+
+    body.style.overflow = 'hidden'
+    aurCont.style.backgroundColor = 'white'
+    aurCont.style.textAlign = 'left'
+    aurCont.style.position = 'absolute'
+    aurCont.style.top = '0px'
+    aurCont.style.right = '0px'
+    aurCont.style.bottom = '0px'
+    aurCont.style.left = '0px'
+    aurHeader.style.position = 'relative'
+    aurHeader.style.backgroundColor = '#333'
+    aurLogo.style.position = 'relative'
+    aurLogo.style.opacity = 0
+    aurLogo.style.filter = 'alpha(opacity=0)'
+    aurLogo.style.marginTop = '10px'
+    aurLogo.style.marginLeft = '15px'
+    aurLogo.style.marginBottom = '15px'
+    aurLogo.style.height = '40px'
+    aurProgressBar.style.position = 'absolute'
+    aurProgressBar.style.bottom = '0px'
+    aurProgressBar.style.height = '5px'
+    aurProgressBar.style.lineHeight = '5px'
+    aurProgressBar.style.maxHeight = '5px'
+    aurProgressBar.style.width = '0px'
+    aurProgressBar.style.backgroundColor = '#08C'
+    aurStatus.style.position = 'absolute'
+    aurStatus.style.top = '104%'
+    aurStatus.style.left = '4px'
+    aurStatus.style.fontSize = '0.8em'
+    aurStatus.style.fontWeight = 'bold'
+
+    /* add to DOM */
+    aurLogo.setAttribute('src', 'http://www.archlinux.org/media/archnavbar/archlogo.gif')
+    aurStatus.appendChild(txt('Initializing...'))
+
+    body.appendChild(aurCont)
+    aurCont.appendChild(aurHeader)
+    aurHeader.appendChild(aurLogo)
+    aurHeader.appendChild(aurStatus)
+    aurHeader.appendChild(aurProgressBar)
+
+    var redrawId = setInterval(
+        function() { for(var t in redraw) if(redraw[t]) redrawTargets[t]() } , guiRefreshRate
+    )
+
+    var init = function() {
+        while(aurStatus.hasChildNodes()) aurStatus.removeChild(aurStatus.firstChild)
+        aurStatus.appendChild(txt('Loading...'))
+    }
+
+    var load = function() {
+        while(aurStatus.hasChildNodes()) aurStatus.removeChild(aurStatus.firstChild)
+        aurStatus.appendChild(txt('Complete'))
+        redraw.fade = true
+    }
+
+    var kill = function() {
+        clearInterval(redrawId)
+        body.removeChild(aurCont)
+        body.style.overflow = 'auto'
+    }
+
+    redrawTargets.progress = function() {
+            progressTarget = modLoaded/modStarted
+            progressCurrent = progressCurrent + ((progressTarget-progressCurrent)*0.1)
+            aurLogo.style.opacity = progressCurrent
+            aurLogo.style.filter = 'alpha(opacity=' + progressCurrent*100 + ')'
+            aurProgressBar.style.width = String(progressCurrent*100) + '%'
+    }
+
+    redrawTargets.fade = function() {
+            var c = this.fade.curr, s = this.fade.step
+            if(c<=0) { kill(); return }
+            aurCont.style.opacity = c/s
+            aurCont.style.filter = 'alpha(opacity=' + c/s*100 + ')'
+            this.fade.curr--
+    }
+    redrawTargets.fade.step = redrawTargets.fade.curr = fadeStep
+
+    __pygwt_modController.addListener('init', init)
+    __pygwt_modController.addListener('moduleInit', function(a, m) { modStarted++ })
+    __pygwt_modController.addListener('moduleLoad', function(a, m) { modLoaded++ })
+    __pygwt_modController.addListener('load', load)
+    __pygwt_modController.addListener('hookException', kill)
+
+    redraw.progress = true
+
+}
+
+//////////////////////////////////////////////////////////////////
 // Set it up
 //
+__pygwt_earlyUser();
 __pygwt_processMetas();
 __pygwt_hookOnLoad();
 __pygwt_forEachModule(__pygwt_injectWebModeFrame);
