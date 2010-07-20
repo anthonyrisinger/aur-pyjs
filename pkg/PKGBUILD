@@ -6,7 +6,7 @@ pkgdesc="Implementation of the AUR in python (pyjs)"
 url=http://devel.extof.me/aur-pyjs
 arch=(any)
 license=(BSD)
-depends=(python pyjamas)
+depends=(python pyjamas-git)
 makedepends=(git)
 source=()
 
