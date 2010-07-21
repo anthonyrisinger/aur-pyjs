@@ -28,6 +28,7 @@ var __pygwt_onLoadError = function (exception, name) {
 
 };
 
+
 function __pygwt_processMetas() {
   var metas = document.getElementsByTagName("meta");
   for (var i = 0, n = metas.length; i < n; ++i) {
@@ -322,7 +323,9 @@ var __pygwt_modController = {
 //
 function __pygwt_earlyUser() {
 
-    var guiRefreshRate = 50
+    // ms, count, count
+    var refreshRate = 50
+    var drawLimit = 200
     var fadeStep = 20
 
     var elem = function(e) { return document.createElement(e) }
@@ -337,108 +340,149 @@ function __pygwt_earlyUser() {
     var progress = {
         target: 0,
         current: 0,
-        accel: 0,
-        lastUpdate: new Date().getTime()
+        accel: 0
     }
-    var aur = {
+    var splash = {
         cont: elem('div'),
         header: elem('div'),
         logo: elem('img'),
+        infoCont: elem('div'),
         progressBar: elem('div'),
         status: elem('div')
     }
-    var redraw = {
-        id: setInterval(function() { for(var t in redraw.active) if(redraw.active[t]) redraw.target[t]() } , guiRefreshRate),
+
+    var draw = {
+        exec: function(outOfInterval) {
+            if(draw.count >= drawLimit)
+                draw.active.kill = true
+            if(draw.count && outOfInterval)
+                if(((new Date().getTime()) - draw.start)/draw.count < refreshRate)
+                    return
+            draw.count++
+            try {
+                for(var t in draw.active) if(draw.active[t]) draw.target[t]()
+            } catch(e) {
+                for(var t in draw.active) draw.active[t] = false
+                draw.active.kill = true
+            }
+            app = null; module = null
+        },
+        id: false,
+        start: new Date().getTime(),
+        count: 0,
         active: {},
         target: {}
     }
 
-    body.style.overflow = 'hidden'
-    aur.cont.style.backgroundColor = 'white'
-    aur.cont.style.textAlign = 'left'
-    aur.cont.style.position = 'absolute'
-    aur.cont.style.top = '0px'
-    aur.cont.style.right = '0px'
-    aur.cont.style.bottom = '0px'
-    aur.cont.style.left = '0px'
-    aur.header.style.position = 'relative'
-    aur.header.style.backgroundColor = '#333'
-    aur.logo.style.position = 'relative'
-    aur.logo.style.opacity = 0
-    aur.logo.style.filter = 'alpha(opacity=0)'
-    aur.logo.style.marginTop = '10px'
-    aur.logo.style.marginLeft = '15px'
-    aur.logo.style.marginBottom = '15px'
-    aur.logo.style.height = '40px'
-    aur.progressBar.style.position = 'absolute'
-    aur.progressBar.style.bottom = '0px'
-    aur.progressBar.style.height = '5px'
-    aur.progressBar.style.lineHeight = '5px'
-    aur.progressBar.style.maxHeight = '5px'
-    aur.progressBar.style.width = '0px'
-    aur.progressBar.style.backgroundColor = '#08C'
-    aur.status.style.position = 'absolute'
-    aur.status.style.top = '104%'
-    aur.status.style.left = '4px'
-    aur.status.style.fontSize = '0.8em'
-    aur.status.style.fontWeight = 'bold'
-
-    /* add to DOM */
-    aur.logo.setAttribute('src', 'http://www.archlinux.org/media/archnavbar/archlogo.gif')
-    aur.status.appendChild(txt('Initializing...'))
-
-    body.appendChild(aur.cont)
-    aur.cont.appendChild(aur.header)
-    aur.header.appendChild(aur.logo)
-    aur.header.appendChild(aur.status)
-    aur.header.appendChild(aur.progressBar)
-
-    var init = function() {
-        while(aur.status.hasChildNodes()) aur.status.removeChild(aur.status.firstChild)
-        aur.status.appendChild(txt('Loading...'))
-    }
-
-    var load = function() {
-        while(aur.status.hasChildNodes()) aur.status.removeChild(aur.status.firstChild)
-        aur.status.appendChild(txt('Complete'))
-        redraw.active.fade = true
-    }
-
-    var kill = function() {
-        clearInterval(redraw.id)
-        body.removeChild(aur.cont)
+    draw.target.kill = function() {
+        clearInterval(draw.id)
+        body.removeChild(splash.cont)
         body.style.overflow = 'auto'
     }
 
-    redraw.target.progress = function(app, module) {
-            if(app && module) {
-                var end = app.modules.list[module].end
-                if((end-redraw.lastUpdate)<guiRefreshRate) { return }
-                else { redraw.lastUpdate = end }
-            }
-            redraw.active.progress = true
-            progress.target = mod.loaded/mod.started
-            progress.accel = (progress.target - progress.current)/3
-            progress.current = progress.current + progress.accel
-            aur.logo.style.opacity = progress.current
-            aur.logo.style.filter = 'alpha(opacity=' + progress.current*100 + ')'
-            aur.progressBar.style.width = String(progress.current*100) + '%'
+    draw.target.progress = function() {
+        if(!mod.started)
+            return
+        progress.target = mod.loaded/mod.started
+        progress.accel = (progress.target - progress.current)/3
+        progress.current = progress.current + progress.accel
+        splash.logo.style.opacity = progress.current
+        splash.logo.style.filter = 'alpha(opacity=' + progress.current*100 + ')'
+        splash.progressBar.style.width = String(progress.current*100) + '%'
     }
 
-    redraw.target.fade = function() {
-            var c = this.fade.curr, s = this.fade.step
-            if(c<=0) { kill(); return }
-            aur.cont.style.opacity = c/s
-            aur.cont.style.filter = 'alpha(opacity=' + c/s*100 + ')'
-            this.fade.curr--
+    draw.target.status = function() {
+        var status
+        if(this.status.stage == 0) {
+            status = 'Initializing...'
+        }
+        else if(this.status.stage == 1) {
+            if(!(mod.started > 0)) return
+            status = 'Loading...'
+        }
+        else if(this.status.stage == 2) {
+            if(!(progress.target == 1)) return
+            status = 'Complete'
+        }
+        else { return }
+        this.status.stage++
+        while(splash.status.hasChildNodes()) splash.status.removeChild(splash.status.firstChild)
+            splash.status.appendChild(txt(status))
     }
-    redraw.target.fade.step = redraw.target.fade.curr = fadeStep
+    draw.target.status.stage = 0
 
-    __pygwt_modController.addListener('init', init)
+    draw.target.fade = function() {
+        var c = this.fade.curr, s = this.fade.step
+        if(c<=0) {
+            draw.active.kill = true
+            return
+        }
+        splash.cont.style.opacity = c/s
+        splash.cont.style.filter = 'alpha(opacity=' + c/s*100 + ')'
+        this.fade.curr--
+    }
+    draw.target.fade.step = draw.target.fade.curr = fadeStep
+
+    splash.style = function() {
+        body.style.overflow = 'hidden'
+        splash.cont.style.backgroundColor = 'white'
+        splash.cont.style.color = '#333'
+        splash.cont.style.zIndex = '10000'
+        splash.cont.style.textAlign = 'left'
+        splash.cont.style.position = 'absolute'
+        splash.cont.style.top = '0px'
+        splash.cont.style.left = '0px'
+        splash.cont.style.width = '100%'
+        splash.cont.style.height = '100%'
+        splash.header.style.textAlign = 'left'
+        splash.header.style.backgroundColor = '#333'
+        splash.logo.setAttribute('src', 'http://www.archlinux.org/media/archnavbar/archlogo.gif')
+        splash.logo.style.opacity = 0
+        splash.logo.style.filter = 'alpha(opacity=0)'
+        splash.logo.style.marginTop = '10px'
+        splash.logo.style.marginLeft = '15px'
+        splash.logo.style.marginBottom = '15px'
+        splash.logo.style.height = '40px'
+        splash.infoCont.style.position = 'relative'
+        splash.infoCont.style.top = '-5px'
+        splash.progressBar.style.height = '5px'
+        splash.progressBar.style.lineHeight = '5px'
+        splash.progressBar.style.fontSize = '0px'
+        splash.progressBar.style.maxHeight = '5px'
+        splash.progressBar.style.width = '0px'
+        splash.progressBar.style.backgroundColor = '#08C'
+        splash.status.style.marginTop = '2px'
+        splash.status.style.marginLeft = '6px'
+        splash.status.style.fontFamily = 'sans'
+        splash.status.style.fontWeight = 'bold'
+        splash.status.style.fontSize = '0.6em'
+    }
+
+    splash.attach = function() {
+        body.appendChild(splash.cont)
+        splash.cont.appendChild(splash.header)
+        splash.header.appendChild(splash.logo)
+        splash.cont.appendChild(splash.infoCont)
+        splash.infoCont.appendChild(splash.progressBar)
+        splash.infoCont.appendChild(splash.status)
+    }
+
+    // connect to controller
     __pygwt_modController.addListener('moduleInit', function(a, m) { mod.started++ })
-    __pygwt_modController.addListener('moduleLoad', function(a, m) { mod.loaded++; redraw.target.progress(a, m) })
-    __pygwt_modController.addListener('load', load)
-    __pygwt_modController.addListener('hookException', kill)
+    __pygwt_modController.addListener('moduleLoad', function(a, m) { mod.loaded++; draw.exec(true) })
+    __pygwt_modController.addListener('load', function() { draw.active.fade = true })
+    __pygwt_modController.addListener('hookException', draw.target.kill)
+
+    // default draw targets
+    draw.active.progress = true
+    draw.active.status = true
+
+    // setup
+    splash.style()
+    splash.attach()
+
+    // start the draw loop
+    draw.id = setInterval(draw.exec, refreshRate)
 
 }
 
