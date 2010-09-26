@@ -1,5 +1,5 @@
 *~
 *.swp
+*.pid
 /.pyjs
 /out
-/.aur/var/run/*.pid
