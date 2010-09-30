@@ -135,16 +135,17 @@ app_cmd_post_main () {
 app_sync_create_or_update_sandbox () {
 
     if [ -e .pyjs/.git ]; then
-        git --git-dir=.pyjs/.git pull ||
+        spushd .pyjs
+        git pull ||
             app_exception ${LINENO} fatal "unable to update pyjs"
     else
         git clone ${APP_SYNC_PYJS_REMOTE} .pyjs ||
             app_exception ${LINENO} fatal "unable to clone pyjs"
+        spushd .pyjs
     fi  
 
     # run bootstrap everytime
-    spushd .pyjs
-    make local-build ||
+    python2 bootstrap.py ||
         app_exception ${LINENO} fatal "unable to bootstrap pyjs"
     spopd
 

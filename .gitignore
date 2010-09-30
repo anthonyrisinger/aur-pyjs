@@ -1,5 +1,6 @@
 *~
 *.swp
 *.pid
+*.py[co]
 /.pyjs
 /out

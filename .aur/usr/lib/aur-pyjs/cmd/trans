@@ -10,9 +10,10 @@ app_cmd_init () {
         app_exception ${LINENO} fatal "unable to source shared/dir_stack"
 
     # required variables
-    APP_COMMAND_OPTSTR=":"
+    APP_COMMAND_OPTSTR=":d"
 
     # COMMAND OPTSTRING/PARAM derived variables
+    : ${APP_TRANS_DEBUG:=}
 
     # internal variables
     : ${APP_TRANS_BASE:=${APP_BASE%/*}}
@@ -48,8 +49,8 @@ app_cmd_opt () {
 
     local opt="${1}" optind="${2}" optarg="${3}"
     case "${opt}" in
-    *)
-        app_exception ${LINENO} fatal "COMMAND does not accept any options" ${FUNCNAME}
+    d)
+        APP_TRANS_DEBUG='d --source-tracking --line-tracking'
     ;;
     :)
         app_exception ${LINENO} fatal "option -${optarg} requires an argument" ${FUNCNAME}
@@ -116,8 +117,15 @@ app_cmd_main () {
     rm -rf out/*
 
     # build AUR
-    spushd src 
-    ${APP_TRANS_EXEC} -mcO --bootstrap-file='Aur.js' --output='../out' Aur.py
+    spushd lib/gui
+    python2 ${APP_TRANS_EXEC} \
+        -mcO${APP_TRANS_DEBUG} \
+        --no-compile-inplace \
+        --bound-methods \
+        --library_dir "${APP_TRANS_BASE}" \
+        --library_dir "${APP_TRANS_BASE}/lib/ext" \
+        --output "${APP_TRANS_BASE}/out" \
+        aur.py
     spopd
 
     # copy pub folder to out

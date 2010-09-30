@@ -113,10 +113,11 @@ app_cmd_main () {
             rm -f ${pidfile}
     fi
 
-    app_exception ${LINENO} info "serving directory: $(pwd)" ${FUNCNAME}
+    app_exception ${LINENO} info "directory: $(pwd)" ${FUNCNAME}
+    app_exception ${LINENO} info "hyperlink: http://localhost:${APP_SERVE_PORT}" ${FUNCNAME}
     if ${APP_SERVE_FORK}; then
         app_exception ${LINENO} info "forking server to background..." ${FUNCNAME}
-        python -m SimpleHTTPServer ${APP_SERVE_PORT} >&3 2>&1 &
+        python2 -m SimpleHTTPServer ${APP_SERVE_PORT} >&3 2>&1 &
         pid=${!}
         ${k} -0 ${pid} 2>&3 ||
             app_exception ${LINENO} fatal "problem running/forking server" ${FUNCNAME}
@@ -124,7 +125,7 @@ app_cmd_main () {
         app_exception ${LINENO} info "pid ${pid}" ${FUNCNAME}
     else
         app_exception ${LINENO} info "running in foreground..." ${FUNCNAME}
-        python -m SimpleHTTPServer ${APP_SERVE_PORT} ||
+        python2 -m SimpleHTTPServer ${APP_SERVE_PORT} ||
             app_exception ${LINENO} fatal "problem running server" ${FUNCNAME}
     fi
 
